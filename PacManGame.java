@@ -5,6 +5,10 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.Random;
+import javax.sound.sampled.*;
+import java.io.File;
+import java.io.IOException;
+
 
 public class PacManGame {
 
@@ -48,6 +52,8 @@ class GamePanel extends JPanel implements ActionListener {
     private boolean gameWon = false;
     private boolean gameOver = false;
 
+    private long lastWakaTime = 0;
+
     private final Random random = new Random();
 
     private Image ratSprite;
@@ -58,6 +64,8 @@ class GamePanel extends JPanel implements ActionListener {
         setBackground(Color.BLACK);
         setFocusable(true);
         initMaze();
+
+        SoundPlayer.playSound("sounds/intro.wav");
 
         ratSprite = new ImageIcon("Rat.png").getImage();
 
@@ -233,6 +241,12 @@ class GamePanel extends JPanel implements ActionListener {
                 dots[pacmanY][pacmanX] = false;
                 score += 10;
 
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastWakaTime >= 1000) {
+                    SoundPlayer.playSound("sounds/waka.wav");
+                    lastWakaTime = currentTime;
+                }
+
                 if (checkWin()) {
                     gameWon = true;
                     timer.stop();
@@ -243,6 +257,7 @@ class GamePanel extends JPanel implements ActionListener {
                 powerPellets[pacmanY][pacmanX] = false;
                 poweredUp = true;
                 powerTimer = 50;
+                SoundPlayer.playSound("sounds/powerup.wav");
             }
 
             if (pacmanX == ghostX && pacmanY == ghostY) {
@@ -250,6 +265,7 @@ class GamePanel extends JPanel implements ActionListener {
                     ghostX = 18;
                     ghostY = 18;
                     score += 100;
+                    SoundPlayer.playSound("sounds/eatghost.wav");
                 } else {
                     gameOver = true;
                     timer.stop();
@@ -324,4 +340,22 @@ class GamePanel extends JPanel implements ActionListener {
         initMaze();
         timer.start();
     }
+    public class SoundPlayer {
+        public static void playSound(String soundFileName) {
+            try {
+                File soundFile = new File(soundFileName);
+                if (soundFile.exists()) {
+                    AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInput);
+                    clip.start();
+                } else {
+                    System.out.println("Sound file not found: " + soundFileName);
+                }
+            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
