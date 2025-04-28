@@ -1,5 +1,3 @@
-
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -52,10 +50,16 @@ class GamePanel extends JPanel implements ActionListener {
 
     private final Random random = new Random();
 
+    private Image ratSprite;
+    private int frame = 0;
+    private final int frameCount = 4; // Change this if you have more/less frames
+
     public GamePanel() {
         setBackground(Color.BLACK);
         setFocusable(true);
         initMaze();
+
+        ratSprite = new ImageIcon("Rat.png").getImage();
 
         addKeyListener(new KeyAdapter() {
             @Override
@@ -152,11 +156,22 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private void drawPacman(Graphics g) {
-        g.setColor(poweredUp ? Color.CYAN : Color.YELLOW);
-        if (mouthOpen) {
-            g.fillArc(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE, 30, 300);
+        if (ratSprite != null) {
+            int frameWidth = ratSprite.getWidth(this) / frameCount;
+            int frameHeight = ratSprite.getHeight(this);
+            g.drawImage(ratSprite,
+                    pacmanX * TILE_SIZE, pacmanY * TILE_SIZE,
+                    pacmanX * TILE_SIZE + TILE_SIZE, pacmanY * TILE_SIZE + TILE_SIZE,
+                    frame * frameWidth, 0,
+                    (frame + 1) * frameWidth, frameHeight,
+                    this);
         } else {
-            g.fillOval(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            g.setColor(poweredUp ? Color.CYAN : Color.YELLOW);
+            if (mouthOpen) {
+                g.fillArc(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE, 30, 300);
+            } else {
+                g.fillOval(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
         }
     }
 
@@ -194,6 +209,7 @@ class GamePanel extends JPanel implements ActionListener {
         movePacman();
         moveGhost();
         mouthOpen = !mouthOpen;
+        frame = (frame + 1) % frameCount;
         if (poweredUp) {
             powerTimer--;
             if (powerTimer <= 0) {
@@ -304,6 +320,7 @@ class GamePanel extends JPanel implements ActionListener {
         mouthOpen = true;
         poweredUp = false;
         powerTimer = 0;
+        frame = 0;
         initMaze();
         timer.start();
     }
