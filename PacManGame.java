@@ -105,6 +105,7 @@ class GamePanel extends JPanel implements ActionListener {
         DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
         DrawComponents.drawGhost(g, ghostX, ghostY, TILE_SIZE);
         DrawComponents.drawScore(g, score);
+        drawScore(g);
 
         if (gameWon) {
             DrawComponents.drawWinMessage(g);
@@ -124,6 +125,7 @@ class GamePanel extends JPanel implements ActionListener {
         mouthOpen = !mouthOpen;
         frame = (frame + 1) % frameCount;
         if (poweredUp) {
+            score+=50;
             powerTimer--;
             if (powerTimer <= 0) {
                 poweredUp = false;
@@ -169,7 +171,7 @@ class GamePanel extends JPanel implements ActionListener {
                 if (poweredUp) {
                     ghostX = 18;
                     ghostY = 18;
-                    score += 100;
+                    score += 200;
                     SoundPlayer.playSound("sounds/eatghost.wav");
                 } else {
                     gameOver = true;
@@ -209,7 +211,7 @@ class GamePanel extends JPanel implements ActionListener {
             if (poweredUp) {
                 ghostX = 18;
                 ghostY = 18;
-                score += 100;
+                score += 50;
             } else {
                 gameOver = true;
                 timer.stop();
@@ -248,5 +250,10 @@ class GamePanel extends JPanel implements ActionListener {
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
         timer.start();
+    }
+    private void drawScore(Graphics g) {
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Score: " + score, 10, 20); // Top left!
     }
 }
