@@ -8,7 +8,7 @@ import java.util.Random;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
-
+import MazeGeneration.MazeGeneration;
 
 public class PacManGame {
 
@@ -41,9 +41,9 @@ class GamePanel extends JPanel implements ActionListener {
 
     private boolean mouthOpen = true;
 
-    private final int[][] maze = new int[ROWS][COLS];
-    private final boolean[][] dots = new boolean[ROWS][COLS];
-    private final boolean[][] powerPellets = new boolean[ROWS][COLS];
+    private int[][] maze = new int[ROWS][COLS];
+    private boolean[][] dots = new boolean[ROWS][COLS];
+    private boolean[][] powerPellets = new boolean[ROWS][COLS];
 
     private boolean poweredUp = false;
     private int powerTimer = 0;
@@ -63,7 +63,13 @@ class GamePanel extends JPanel implements ActionListener {
     public GamePanel() {
         setBackground(Color.BLACK);
         setFocusable(true);
-        initMaze();
+        //MazeGeneration.initMaze();
+        MazeGeneration.generateRandomMaze();
+
+        maze = MazeGeneration.getMaze();
+        dots = MazeGeneration.getDots();
+        powerPellets = MazeGeneration.getPowerPellets();
+
 
         SoundPlayer.playSound("sounds/intro.wav");
 
@@ -90,127 +96,26 @@ class GamePanel extends JPanel implements ActionListener {
         timer.start();
     }
 
-    private void initMaze() {
-        for (int i = 0; i < ROWS; i++) {
-            for (int j = 0; j < COLS; j++) {
-                if (i == 0 || j == 0 || i == ROWS - 1 || j == COLS - 1 || (i % 2 == 0 && j % 2 == 0)) {
-                    maze[i][j] = 1;
-                    dots[i][j] = false;
-                    powerPellets[i][j] = false;
-                } else {
-                    maze[i][j] = 0;
-                    dots[i][j] = true;
-                    powerPellets[i][j] = false;
-                }
-            }
-        }
-        dots[pacmanY][pacmanX] = false;
-        powerPellets[1][1] = true;
-        powerPellets[1][18] = true;
-        powerPellets[18][1] = true;
-        powerPellets[18][18] = true;
-    }
-
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        drawMaze(g);
-        drawDots(g);
-        drawPowerPellets(g);
-        drawPacman(g);
-        drawGhost(g);
-        drawScore(g);
+        DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS);
+        DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
+        DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
+        DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
+        DrawComponents.drawGhost(g, ghostX, ghostY, TILE_SIZE);
+        DrawComponents.drawScore(g, score);
+
         if (gameWon) {
-            drawWinMessage(g);
-            drawRestartMessage(g);
+            DrawComponents.drawWinMessage(g);
+            DrawComponents.drawRestartMessage(g);
         }
         if (gameOver) {
-            drawGameOverMessage(g);
-            drawRestartMessage(g);
+            DrawComponents.drawGameOverMessage(g);
+            DrawComponents.drawRestartMessage(g);
         }
     }
 
-    private void drawMaze(Graphics g) {
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < COLS; col++) {
-                if (maze[row][col] == 1) {
-                    g.setColor(Color.BLUE);
-                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
-            }
-        }
-    }
-
-    private void drawDots(Graphics g) {
-        g.setColor(Color.WHITE);
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < COLS; col++) {
-                if (dots[row][col]) {
-                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 2 - 3, row * TILE_SIZE + TILE_SIZE / 2 - 3, 6, 6);
-                }
-            }
-        }
-    }
-
-    private void drawPowerPellets(Graphics g) {
-        g.setColor(Color.PINK);
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < COLS; col++) {
-                if (powerPellets[row][col]) {
-                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 2 - 6, row * TILE_SIZE + TILE_SIZE / 2 - 6, 12, 12);
-                }
-            }
-        }
-    }
-
-    private void drawPacman(Graphics g) {
-        if (ratSprite != null) {
-            int frameWidth = ratSprite.getWidth(this) / frameCount;
-            int frameHeight = ratSprite.getHeight(this);
-            g.drawImage(ratSprite,
-                    pacmanX * TILE_SIZE, pacmanY * TILE_SIZE,
-                    pacmanX * TILE_SIZE + TILE_SIZE, pacmanY * TILE_SIZE + TILE_SIZE,
-                    frame * frameWidth, 0,
-                    (frame + 1) * frameWidth, frameHeight,
-                    this);
-        } else {
-            g.setColor(poweredUp ? Color.CYAN : Color.YELLOW);
-            if (mouthOpen) {
-                g.fillArc(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE, 30, 300);
-            } else {
-                g.fillOval(pacmanX * TILE_SIZE, pacmanY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            }
-        }
-    }
-
-    private void drawGhost(Graphics g) {
-        g.setColor(Color.RED);
-        g.fillOval(ghostX * TILE_SIZE, ghostY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-    }
-
-    private void drawScore(Graphics g) {
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Score: " + score, 10, 590);
-    }
-
-    private void drawWinMessage(Graphics g) {
-        g.setColor(Color.GREEN);
-        g.setFont(new Font("Arial", Font.BOLD, 40));
-        g.drawString("You Win!", 200, 250);
-    }
-
-    private void drawGameOverMessage(Graphics g) {
-        g.setColor(Color.RED);
-        g.setFont(new Font("Arial", Font.BOLD, 40));
-        g.drawString("Game Over", 180, 250);
-    }
-
-    private void drawRestartMessage(Graphics g) {
-        g.setColor(Color.YELLOW);
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("Press 'R' to Restart", 180, 300);
-    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -337,25 +242,11 @@ class GamePanel extends JPanel implements ActionListener {
         poweredUp = false;
         powerTimer = 0;
         frame = 0;
-        initMaze();
+        //MazeGeneration.initMaze();
+        MazeGeneration.generateRandomMaze();
+        maze = MazeGeneration.getMaze();
+        dots = MazeGeneration.getDots();
+        powerPellets = MazeGeneration.getPowerPellets();
         timer.start();
     }
-    public class SoundPlayer {
-        public static void playSound(String soundFileName) {
-            try {
-                File soundFile = new File(soundFileName);
-                if (soundFile.exists()) {
-                    AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
-                    Clip clip = AudioSystem.getClip();
-                    clip.open(audioInput);
-                    clip.start();
-                } else {
-                    System.out.println("Sound file not found: " + soundFileName);
-                }
-            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
 }
