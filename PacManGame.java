@@ -18,7 +18,7 @@ public class PacManGame {
         GamePanel panel = new GamePanel();
 
         frame.add(panel);
-        frame.setSize(600, 600);
+        frame.setSize(600, 650);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
