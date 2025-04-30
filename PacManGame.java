@@ -13,11 +13,12 @@ import MazeGeneration.MazeGeneration;
 public class PacManGame {
 
     public static void main(String[] args) {
+        // Set up the game window
         JFrame frame = new JFrame("Simple Pacman");
         GamePanel panel = new GamePanel();
 
         frame.add(panel);
-        frame.setSize(600, 600);
+        frame.setSize(600, 650);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
@@ -26,28 +27,34 @@ public class PacManGame {
 
 class GamePanel extends JPanel implements ActionListener {
 
+    // Game constants
     private final int TILE_SIZE = 30;
     private final int ROWS = 20;
     private final int COLS = 20;
     private Timer timer;
 
+    // Pacman position and direction
     private int pacmanX = 1;
     private int pacmanY = 1;
     private int dx = 0;
     private int dy = 0;
 
+    // Ghost position
     private int ghostX = 18;
     private int ghostY = 18;
 
     private boolean mouthOpen = true;
 
+    // Maze and collectibles
     private int[][] maze = new int[ROWS][COLS];
     private boolean[][] dots = new boolean[ROWS][COLS];
     private boolean[][] powerPellets = new boolean[ROWS][COLS];
 
+    // Power-up state
     private boolean poweredUp = false;
     private int powerTimer = 0;
 
+    // Score and game state
     private int score = 0;
     private boolean gameWon = false;
     private boolean gameOver = false;
@@ -56,25 +63,28 @@ class GamePanel extends JPanel implements ActionListener {
 
     private final Random random = new Random();
 
+    // Animation variables
     private Image ratSprite;
     private int frame = 0;
-    private final int frameCount = 4; // Change this if you have more/less frames
+    private final int frameCount = 4; // Number of frames for rat animation
 
     public GamePanel() {
         setBackground(Color.BLACK);
         setFocusable(true);
-        //MazeGeneration.initMaze();
-        MazeGeneration.generateRandomMaze();
 
+        // Generate initial maze
+        MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
 
-
+        // Play intro sound
         SoundPlayer.playSound("sounds/intro.wav");
 
+        // Load rat image sprite
         ratSprite = new ImageIcon("Rat.png").getImage();
 
+        // Add keyboard controls
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -92,6 +102,7 @@ class GamePanel extends JPanel implements ActionListener {
             }
         });
 
+        // Timer for game updates (100 ms)
         timer = new Timer(100, this);
         timer.start();
     }
@@ -99,6 +110,8 @@ class GamePanel extends JPanel implements ActionListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        // Draw all game elements
         DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
@@ -107,6 +120,7 @@ class GamePanel extends JPanel implements ActionListener {
         DrawComponents.drawScore(g, score);
         drawScore(g);
 
+        // Draw win/lose messages
         if (gameWon) {
             DrawComponents.drawWinMessage(g);
             DrawComponents.drawRestartMessage(g);
@@ -117,13 +131,17 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-
     @Override
     public void actionPerformed(ActionEvent e) {
+        // Called every timer tick
         movePacman();
         moveGhost();
+
+        // Animate Pacman's mouth
         mouthOpen = !mouthOpen;
         frame = (frame + 1) % frameCount;
+
+        // Handle power-up timer
         if (poweredUp) {
             score+=50;
             powerTimer--;
@@ -131,6 +149,7 @@ class GamePanel extends JPanel implements ActionListener {
                 poweredUp = false;
             }
         }
+
         repaint();
     }
 
@@ -140,14 +159,17 @@ class GamePanel extends JPanel implements ActionListener {
         int newX = pacmanX + dx;
         int newY = pacmanY + dy;
 
+        // Check for valid movement (no walls)
         if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && maze[newY][newX] == 0) {
             pacmanX = newX;
             pacmanY = newY;
 
+            // Collect dots
             if (dots[pacmanY][pacmanX]) {
                 dots[pacmanY][pacmanX] = false;
                 score += 10;
 
+                // Play waka sound (limited by timer)
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastWakaTime >= 1000) {
                     SoundPlayer.playSound("sounds/waka.wav");
@@ -160,13 +182,15 @@ class GamePanel extends JPanel implements ActionListener {
                 }
             }
 
+            // Collect power pellets
             if (powerPellets[pacmanY][pacmanX]) {
                 powerPellets[pacmanY][pacmanX] = false;
                 poweredUp = true;
-                powerTimer = 50;
+                powerTimer = 50; // Power-up duration
                 SoundPlayer.playSound("sounds/powerup.wav");
             }
 
+            // Collision with ghost
             if (pacmanX == ghostX && pacmanY == ghostY) {
                 if (poweredUp) {
                     ghostX = 18;
@@ -184,6 +208,7 @@ class GamePanel extends JPanel implements ActionListener {
     private void moveGhost() {
         if (gameWon || gameOver) return;
 
+        // Ghost AI tries to minimize distance to Pacman
         int bestDx = 0;
         int bestDy = 0;
         int minDistance = Integer.MAX_VALUE;
@@ -207,6 +232,7 @@ class GamePanel extends JPanel implements ActionListener {
         ghostX += bestDx;
         ghostY += bestDy;
 
+        // Ghost collision with Pacman
         if (pacmanX == ghostX && pacmanY == ghostY) {
             if (poweredUp) {
                 ghostX = 18;
@@ -220,6 +246,7 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private boolean checkWin() {
+        // Check if all dots and power pellets are collected
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 if (dots[row][col] || powerPellets[row][col]) {
@@ -231,6 +258,7 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private void resetGame() {
+        // Reset all game variables for a new game
         pacmanX = 1;
         pacmanY = 1;
         ghostX = 18;
@@ -244,11 +272,13 @@ class GamePanel extends JPanel implements ActionListener {
         poweredUp = false;
         powerTimer = 0;
         frame = 0;
-        //MazeGeneration.initMaze();
+
+        // Generate new maze
         MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
+
         timer.start();
     }
     private void drawScore(Graphics g) {
