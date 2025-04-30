@@ -4,6 +4,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.awt.Point;
 import java.util.Random;
 import javax.sound.sampled.*;
 import java.io.File;
@@ -39,10 +42,6 @@ class GamePanel extends JPanel implements ActionListener {
     private int dx = 0;
     private int dy = 0;
 
-    // Ghost position
-    private int ghostX = 18;
-    private int ghostY = 18;
-
     private boolean mouthOpen = true;
 
     // Maze and collectibles
@@ -65,8 +64,17 @@ class GamePanel extends JPanel implements ActionListener {
 
     // Animation variables
     private Image ratSprite;
+    private Image catSpriteSheet;
     private int frame = 0;
     private final int frameCount = 4; // Number of frames for rat animation
+    private int catFrame = 0;
+    private final int CAT_FRAME_COUNT = 2; // Two frames per cat
+
+    // Cat movement and animation
+    private List<Point> catPositions = new ArrayList<>();
+    private int[] catReleaseTimers = {0, 20, 40};
+    private int catMoveCounter = 0;
+    private final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
 
     public GamePanel() {
         setBackground(Color.BLACK);
@@ -81,8 +89,9 @@ class GamePanel extends JPanel implements ActionListener {
         // Play intro sound
         SoundPlayer.playSound("sounds/intro.wav");
 
-        // Load rat image sprite
+        // Load sprites
         ratSprite = new ImageIcon("Rat.png").getImage();
+        catSpriteSheet = new ImageIcon("cats.png").getImage();
 
         // Add keyboard controls
         addKeyListener(new KeyAdapter() {
@@ -105,6 +114,7 @@ class GamePanel extends JPanel implements ActionListener {
         // Timer for game updates (100 ms)
         timer = new Timer(100, this);
         timer.start();
+        resetGame();
     }
 
     @Override
@@ -116,7 +126,13 @@ class GamePanel extends JPanel implements ActionListener {
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
-        DrawComponents.drawGhost(g, ghostX, ghostY, TILE_SIZE);
+
+        // Draw each cat
+        for (int i = 0; i < catPositions.size(); i++) {
+            Point p = catPositions.get(i);
+            drawCat(g, i, catFrame, p.x, p.y);
+        }
+
         DrawComponents.drawScore(g, score);
 
         // Draw win/lose messages
@@ -130,15 +146,34 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
+    private void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
+        int sourceWidth = 30;
+        int sourceHeight = 30;
+
+        // Calculate the correct frame index (0 to 5)
+        int frameIndex = catIndex * CAT_FRAME_COUNT + frame;
+        int sx = frameIndex * sourceWidth;
+        int sy = 0;
+
+        // Draw the frame directly into the 30x30 tile area
+        g.drawImage(catSpriteSheet,
+                x * TILE_SIZE, y * TILE_SIZE,
+                x * TILE_SIZE + TILE_SIZE, y * TILE_SIZE + TILE_SIZE,
+                sx, sy, sx + sourceWidth, sy + sourceHeight,
+                this
+        );
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
-        // Called every timer tick
         movePacman();
-        moveGhost();
 
         // Animate Pacman's mouth
         mouthOpen = !mouthOpen;
         frame = (frame + 1) % frameCount;
+
+        // Animate cats
+        catFrame = (catFrame + 1) % CAT_FRAME_COUNT;
 
         // Handle power-up timer
         if (poweredUp) {
@@ -146,6 +181,13 @@ class GamePanel extends JPanel implements ActionListener {
             if (powerTimer <= 0) {
                 poweredUp = false;
             }
+        }
+
+        // Throttle cat movement
+        catMoveCounter++;
+        if (catMoveCounter >= CAT_MOVE_DELAY) {
+            moveGhost();
+            catMoveCounter = 0;
         }
 
         repaint();
@@ -157,42 +199,74 @@ class GamePanel extends JPanel implements ActionListener {
         int newX = pacmanX + dx;
         int newY = pacmanY + dy;
 
-        // Check for valid movement (no walls)
         if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && maze[newY][newX] == 0) {
             pacmanX = newX;
             pacmanY = newY;
 
-            // Collect dots
             if (dots[pacmanY][pacmanX]) {
                 dots[pacmanY][pacmanX] = false;
                 score += 10;
-
-                // Play waka sound (limited by timer)
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastWakaTime >= 1000) {
                     SoundPlayer.playSound("sounds/waka.wav");
                     lastWakaTime = currentTime;
                 }
-
                 if (checkWin()) {
                     gameWon = true;
                     timer.stop();
                 }
             }
 
-            // Collect power pellets
             if (powerPellets[pacmanY][pacmanX]) {
                 powerPellets[pacmanY][pacmanX] = false;
                 poweredUp = true;
-                powerTimer = 50; // Power-up duration
+                powerTimer = 50;
                 SoundPlayer.playSound("sounds/powerup.wav");
             }
+        }
+    }
 
-            // Collision with ghost
-            if (pacmanX == ghostX && pacmanY == ghostY) {
+    private void moveGhost() {
+        if (gameWon || gameOver) return;
+
+        for (int i = 0; i < catPositions.size(); i++) {
+            if (catReleaseTimers[i] > 0) {
+                catReleaseTimers[i]--;
+                continue;
+            }
+
+            Point cat = catPositions.get(i);
+            int catX = cat.x;
+            int catY = cat.y;
+
+            int bestDx = 0;
+            int bestDy = 0;
+            int minDistance = Integer.MAX_VALUE;
+
+            int[] dxs = {-1, 1, 0, 0};
+            int[] dys = {0, 0, -1, 1};
+
+            for (int j = 0; j < 4; j++) {
+                int newX = catX + dxs[j];
+                int newY = catY + dys[j];
+                if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && maze[newY][newX] == 0) {
+                    int distance = Math.abs(newX - pacmanX) + Math.abs(newY - pacmanY);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestDx = dxs[j];
+                        bestDy = dys[j];
+                    }
+                }
+            }
+
+            int nextX = catX + bestDx;
+            int nextY = catY + bestDy;
+
+            catPositions.set(i, new Point(nextX, nextY));
+
+            if (pacmanX == nextX && pacmanY == nextY) {
                 if (poweredUp) {
-                    ghostX = 18;
-                    ghostY = 18;
+                    catPositions.set(i, new Point(10, 10));
                     score += 100;
                     SoundPlayer.playSound("sounds/eatghost.wav");
                 } else {
@@ -203,48 +277,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    private void moveGhost() {
-        if (gameWon || gameOver) return;
-
-        // Ghost AI tries to minimize distance to Pacman
-        int bestDx = 0;
-        int bestDy = 0;
-        int minDistance = Integer.MAX_VALUE;
-
-        int[] dxs = {-1, 1, 0, 0};
-        int[] dys = {0, 0, -1, 1};
-
-        for (int i = 0; i < 4; i++) {
-            int newGhostX = ghostX + dxs[i];
-            int newGhostY = ghostY + dys[i];
-            if (newGhostX >= 0 && newGhostX < COLS && newGhostY >= 0 && newGhostY < ROWS && maze[newGhostY][newGhostX] == 0) {
-                int distance = Math.abs(newGhostX - pacmanX) + Math.abs(newGhostY - pacmanY);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestDx = dxs[i];
-                    bestDy = dys[i];
-                }
-            }
-        }
-
-        ghostX += bestDx;
-        ghostY += bestDy;
-
-        // Ghost collision with Pacman
-        if (pacmanX == ghostX && pacmanY == ghostY) {
-            if (poweredUp) {
-                ghostX = 18;
-                ghostY = 18;
-                score += 100;
-            } else {
-                gameOver = true;
-                timer.stop();
-            }
-        }
-    }
-
     private boolean checkWin() {
-        // Check if all dots and power pellets are collected
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 if (dots[row][col] || powerPellets[row][col]) {
@@ -256,11 +289,8 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private void resetGame() {
-        // Reset all game variables for a new game
         pacmanX = 1;
         pacmanY = 1;
-        ghostX = 18;
-        ghostY = 18;
         dx = 0;
         dy = 0;
         score = 0;
@@ -270,12 +300,20 @@ class GamePanel extends JPanel implements ActionListener {
         poweredUp = false;
         powerTimer = 0;
         frame = 0;
+        catFrame = 0;
+        catMoveCounter = 0;
 
-        // Generate new maze
         MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
+
+        catPositions.clear();
+        catPositions.add(new Point(10, 10));
+        catPositions.add(new Point(10, 10));
+        catPositions.add(new Point(10, 10));
+
+        catReleaseTimers = new int[]{0, 20, 40};
 
         timer.start();
     }
