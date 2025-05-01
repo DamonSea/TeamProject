@@ -1,14 +1,59 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
 public class DrawComponents
 {
-    public static void drawMaze(Graphics g, int[][] maze, int TILE_SIZE, int ROWS, int COLS) {
+    static double[][] previousMap = new double[30][30];
+    static BufferedImage mazeBlockSheet;
+    static String theme = "outdoor";
+
+    public static void loadSprites() throws IOException {
+        mazeBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Outdoor.png"));
+    }
+
+
+    public static void drawMaze(Graphics g, int[][] maze, int TILE_SIZE, int ROWS, int COLS, boolean usingPreviousMap) throws IOException {
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 if (maze[row][col] == 1) {
-                    g.setColor(Color.BLUE);
-                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    if (theme.equals("standard"))
+                    {
+                        g.setColor(Color.BLUE);
+                        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                    else if (theme.equals("outdoor"))
+                    {
+                        double randomValue;
+                        if (usingPreviousMap)
+                        {
+                            randomValue = previousMap[col][row];
+                        }
+                        else
+                        {
+                            randomValue = Math.random();
+                            previousMap[col][row] = randomValue;
+                        }
+                        if (randomValue <= 0.82)
+                        {
+                            g.drawImage(mazeBlockSheet.getSubimage(0, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                        else if (randomValue <= 0.88)
+                        {
+                            g.drawImage(mazeBlockSheet.getSubimage(TILE_SIZE, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                        else if (randomValue <= 0.94)
+                        {
+                            g.drawImage(mazeBlockSheet.getSubimage(TILE_SIZE*2, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                        else
+                        {
+                            g.drawImage(mazeBlockSheet.getSubimage(TILE_SIZE*3, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                    }
                 }
             }
         }

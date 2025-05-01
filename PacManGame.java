@@ -15,7 +15,7 @@ import MazeGeneration.MazeGeneration;
 
 public class PacManGame {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // Set up the game window
         JFrame frame = new JFrame("Simple Pacman");
         GamePanel panel = new GamePanel();
@@ -57,6 +57,7 @@ class GamePanel extends JPanel implements ActionListener {
     private int score = 0;
     private boolean gameWon = false;
     private boolean gameOver = false;
+    private boolean usingPreviousMap = false;
 
     private long lastWakaTime = 0;
 
@@ -76,8 +77,15 @@ class GamePanel extends JPanel implements ActionListener {
     private int catMoveCounter = 0;
     private final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
 
-    public GamePanel() {
-        setBackground(Color.BLACK);
+    public GamePanel() throws IOException {
+        if (DrawComponents.theme.equals("standard"))
+        {
+            setBackground(Color.BLACK);
+        }
+        else if (DrawComponents.theme.equals("outdoor"))
+        {
+            setBackground(new Color(150,110,0));
+        }
         setFocusable(true);
 
         // Generate initial maze
@@ -85,6 +93,8 @@ class GamePanel extends JPanel implements ActionListener {
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
+
+        DrawComponents.loadSprites();
 
         // Play intro sound
         SoundPlayer.playSound("sounds/intro.wav");
@@ -120,9 +130,13 @@ class GamePanel extends JPanel implements ActionListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         // Draw all game elements
-        DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS);
+        try {
+            DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS, usingPreviousMap);
+            usingPreviousMap = true;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
@@ -298,6 +312,7 @@ class GamePanel extends JPanel implements ActionListener {
         gameOver = false;
         mouthOpen = true;
         poweredUp = false;
+        usingPreviousMap = false;
         powerTimer = 0;
         frame = 0;
         catFrame = 0;
