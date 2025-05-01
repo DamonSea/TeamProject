@@ -67,6 +67,8 @@ class GamePanel extends JPanel implements ActionListener {
     // Animation variables
     private Image ratSprite;
     private Image catSpriteSheet;
+    private Image catScaredSpriteSheet;
+    private Image catEyesSpriteSheet;
     private int frame = 0;
     private final int frameCount = 4; // Number of frames for rat animation
     private int catFrame = 0;
@@ -110,6 +112,9 @@ class GamePanel extends JPanel implements ActionListener {
         // Load sprites
         ratSprite = new ImageIcon("Rat.png").getImage();
         catSpriteSheet = new ImageIcon("cats.png").getImage();
+        catScaredSpriteSheet = new ImageIcon("cats_scared.png").getImage();
+        catEyesSpriteSheet = new ImageIcon("cat_eyes.png").getImage();
+
 
         // Add keyboard controls
         addKeyListener(new KeyAdapter() {
@@ -170,19 +175,33 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
-        int sourceWidth = 30;
-        int sourceHeight = 30;
+        Image sprite;
+        int frameWidth;
+        int frameHeight;
 
-        // Calculate the correct frame index (0 to 5)
+        if (catScattering[catIndex]) {
+            sprite = catEyesSpriteSheet;
+            frameWidth = 64;
+            frameHeight = 64;
+        } else if (poweredUp) {
+            sprite = catScaredSpriteSheet;
+            frameWidth = 64;
+            frameHeight = 64;
+        } else {
+            sprite = catSpriteSheet;
+            frameWidth = 30;
+            frameHeight = 30;
+        }
+        // Get frame position
         int frameIndex = catIndex * CAT_FRAME_COUNT + frame;
-        int sx = frameIndex * sourceWidth;
+        int sx = frameIndex * frameWidth;
         int sy = 0;
 
-        // Draw the frame directly into the 30x30 tile area
-        g.drawImage(catSpriteSheet,
+        // Draw the image scaled to TILE_SIZE x TILE_SIZE
+        g.drawImage(sprite,
                 x * TILE_SIZE, y * TILE_SIZE,
                 x * TILE_SIZE + TILE_SIZE, y * TILE_SIZE + TILE_SIZE,
-                sx, sy, sx + sourceWidth, sy + sourceHeight,
+                sx, sy, sx + frameWidth, sy + frameHeight,
                 this
         );
     }
@@ -341,8 +360,8 @@ class GamePanel extends JPanel implements ActionListener {
 
             // --- 2) normal chase AI ---
             int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
-            int[] dxs = { -1, 1, 0, 0 };
-            int[] dys = { 0, 0, -1, 1 };
+            int[] dxs = {-1, 1, 0, 0};
+            int[] dys = {0, 0, -1, 1};
 
             for (int j = 0; j < 4; j++) {
                 int tx = cat.x + dxs[j];
@@ -361,16 +380,14 @@ class GamePanel extends JPanel implements ActionListener {
             int nextX = cat.x + bestDx;
             int nextY = cat.y + bestDy;
 
-            // --- 3) collision check & trigger scatter or game over ---
+// --- 3) collision check & trigger scatter or game over ---
             if (nextX == pacmanX && nextY == pacmanY) {
                 if (poweredUp) {
-                    // start scatter for this cat
-                    catScattering[i]   = true;
+                    catScattering[i] = true;
                     catScatterTimer[i] = SCATTER_DURATION;
                     score += 100;
                     SoundPlayer.playSound("sounds/eatghost.wav");
 
-                    // compute run-away vector
                     int dx = cat.x - pacmanX;
                     int dy = cat.y - pacmanY;
                     if (Math.abs(dx) > Math.abs(dy)) {
@@ -380,8 +397,7 @@ class GamePanel extends JPanel implements ActionListener {
                         scatterDx[i] = 0;
                         scatterDy[i] = Integer.signum(dy);
                     }
-                    // skip updating position this tick
-                    continue;
+                    return; // skip move this tick
                 } else {
                     gameOver = true;
                     timer.stop();
@@ -389,12 +405,49 @@ class GamePanel extends JPanel implements ActionListener {
                 }
             }
 
-            // --- 4) commit normal move ---
-            catPositions.set(i, new Point(nextX, nextY));
+// --- 4) bounce logic if another ghost is in the way ---
+            boolean occupied = false;
+            for (int j = 0; j < catPositions.size(); j++) {
+                if (j != i) {
+                    Point otherCat = catPositions.get(j);
+                    if (otherCat.x == nextX && otherCat.y == nextY) {
+                        occupied = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!occupied) {
+                catPositions.set(i, new Point(nextX, nextY));
+            } else {
+                // Try alternate directions in random order
+                List<Integer> dirs = List.of(0, 1, 2, 3);
+                List<Integer> shuffled = new ArrayList<>(dirs);
+                java.util.Collections.shuffle(shuffled);
+
+                for (int dir : shuffled) {
+                    int altX = cat.x + dxs[dir];
+                    int altY = cat.y + dys[dir];
+
+                    if (altX < 0 || altX >= COLS || altY < 0 || altY >= ROWS) continue;
+                    if (maze[altY][altX] == 1) continue;
+
+                    boolean occupiedAlt = false;
+                    for (int j = 0; j < catPositions.size(); j++) {
+                        if (j != i && catPositions.get(j).x == altX && catPositions.get(j).y == altY) {
+                            occupiedAlt = true;
+                            break;
+                        }
+                    }
+
+                    if (!occupiedAlt) {
+                        catPositions.set(i, new Point(altX, altY));
+                        break;
+                    }
+                }
+            }
         }
     }
-
-
     public class SoundPlayer {
         public static void playSound(String soundFileName) {
             try {
