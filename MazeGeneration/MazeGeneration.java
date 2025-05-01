@@ -12,7 +12,7 @@ public class MazeGeneration
     private static final boolean[][] dots = new boolean[ROWS][COLS];
     private static final boolean[][] powerPellets = new boolean[ROWS][COLS];
 
-    public static void initMaze() {
+    public static void generateRandomMaze(int level) {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLS; j++) {
                 if (i == 0 || j == 0 || i == ROWS - 1 || j == COLS - 1 || (i % 2 == 0 && j % 2 == 0)) {

@@ -129,4 +129,11 @@ public class DrawComponents
         g.setFont(new Font("Arial", Font.BOLD, 20));
         g.drawString("Press 'R' to Restart", 180, 300);
     }
+
+    // method for draw level for current level as level progress
+    public static void drawLevel(Graphics g, int level) {
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Level: " + level, 500, 30);
+    }
 }

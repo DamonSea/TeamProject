@@ -164,6 +164,8 @@ class GamePanel extends JPanel implements ActionListener {
 
         DrawComponents.drawScore(g, score);
 
+        DrawComponents.drawLevel(g, level); //calls drawLevel to draw current level
+
         // Draw win/lose messages
         if (gameWon) {
             DrawComponents.drawWinMessage(g);
@@ -474,7 +476,16 @@ class GamePanel extends JPanel implements ActionListener {
         return true;
     }
 
+    private int level = 1; // start from level one
+
+
+
     private void resetGame() {
+        if (gameWon) {
+            level++; // Advance to next level
+        } else {
+            level = 1; // reset to level 1 if lost
+        }
         pacmanX = 1;
         pacmanY = 1;
         dx = 0;
@@ -490,11 +501,13 @@ class GamePanel extends JPanel implements ActionListener {
         catFrame = 0;
         catMoveCounter = 0;
 
+        //generates a new maze map based on the level
         MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
 
+        // Reset cat positions
         catPositions.clear();
         catPositions.add(new Point(9, 18));
         catPositions.add(new Point(10, 18));
