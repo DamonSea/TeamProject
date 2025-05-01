@@ -21,10 +21,11 @@ public class PacManGame {
         GamePanel panel = new GamePanel();
 
         frame.add(panel);
-        frame.setSize(600, 650);
+        frame.setSize(610, 635);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        frame.setResizable(false);
     }
 }
 
@@ -241,6 +242,15 @@ class GamePanel extends JPanel implements ActionListener {
 
     private void movePacman() {
         if (gameWon || gameOver) return;
+
+        if (pacmanX == 0)
+        {
+            pacmanX = 18;
+        }
+        else if (pacmanX == 19)
+        {
+            pacmanX = 1;
+        }
 
         // 1) store old Pac-Man pos
         int prevPX = pacmanX, prevPY = pacmanY;
@@ -486,9 +496,9 @@ class GamePanel extends JPanel implements ActionListener {
         powerPellets = MazeGeneration.getPowerPellets();
 
         catPositions.clear();
-        catPositions.add(new Point(9, 17));
-        catPositions.add(new Point(10, 17));
-        catPositions.add(new Point(11, 17));
+        catPositions.add(new Point(9, 18));
+        catPositions.add(new Point(10, 18));
+        catPositions.add(new Point(11, 18));
 
         catReleaseTimers = new int[]{0, 20, 40};
 

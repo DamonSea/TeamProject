@@ -43,14 +43,14 @@ public class MazeGeneration
             }
         }
 
-        for (int i = 1; i < ROWS-2; i++)
+        for (int i = 1; i <= ROWS-2; i++)
         {
             maze[1][i] = 0;
             dots[1][i] = true;
             maze[i][1] = 0;
             dots[i][1] = true;
-            maze[ROWS-3][i] = 0;
-            dots[ROWS-3][i] = true;
+            maze[ROWS-2][i] = 0;
+            dots[ROWS-2][i] = true;
             maze[i][ROWS-2] = 0;
             dots[i][ROWS-2] = true;
         }
@@ -82,7 +82,7 @@ public class MazeGeneration
             }
             else
             {
-                for (int j = 2; j < COLS-3; j++)
+                for (int j = 2; j < COLS-2; j++)
                 {
                     maze[j][randomY] = 0;
                     dots[j][randomY] = true;
@@ -91,8 +91,13 @@ public class MazeGeneration
         }
         //powerPellets[1][1] = true;
         powerPellets[1][COLS-2] = true;
-        powerPellets[ROWS-3][1] = true;
-        powerPellets[ROWS-3][COLS-2] = true;
+        powerPellets[ROWS-2][1] = true;
+        powerPellets[ROWS-2][COLS-2] = true;
+
+        maze[9][0] = 0;
+        maze[10][0] = 0;
+        maze[9][19] = 0;
+        maze[10][19] = 0;
     }
 
     public static int[][] getMaze()
