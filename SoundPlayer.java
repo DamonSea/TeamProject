@@ -4,8 +4,7 @@ import java.io.IOException;
 
 public class SoundPlayer {
     public static void playSound(String soundFileName) {
-        boolean soundEnabled = true;
-        if (soundEnabled) {
+
             try {
                 File soundFile = new File(soundFileName);
                 if (soundFile.exists()) {
@@ -16,9 +15,8 @@ public class SoundPlayer {
                 } else {
                     System.out.println("Sound file not found: " + soundFileName);
                 }
-            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
     }
 }
