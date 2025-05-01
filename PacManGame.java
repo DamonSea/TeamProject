@@ -179,25 +179,30 @@ class GamePanel extends JPanel implements ActionListener {
         int frameWidth;
         int frameHeight;
 
+        // Pick the correct ghost sprite depending on its state
         if (catScattering[catIndex]) {
+            // Ghost was eaten — show just the eyes
             sprite = catEyesSpriteSheet;
-            frameWidth = 64;
+            frameWidth = 64;   // this sprite sheet uses 64×64 frames
             frameHeight = 64;
         } else if (poweredUp) {
+            // Pac-Man (the rat) ate a power pellet — ghost is scared (turn blue)
             sprite = catScaredSpriteSheet;
             frameWidth = 64;
             frameHeight = 64;
         } else {
+            // Regular ghost chasing the player — use default ghost sprite
             sprite = catSpriteSheet;
-            frameWidth = 30;
+            frameWidth = 30;   // default ghost sprites are 30×30
             frameHeight = 30;
         }
-        // Get frame position
+
+        // Pick which frame to show from the sprite sheet (each ghost has 2 frames for animation)
         int frameIndex = catIndex * CAT_FRAME_COUNT + frame;
         int sx = frameIndex * frameWidth;
         int sy = 0;
 
-        // Draw the image scaled to TILE_SIZE x TILE_SIZE
+        // Draw the selected sprite frame, scaled down to fit the 30×30 grid
         g.drawImage(sprite,
                 x * TILE_SIZE, y * TILE_SIZE,
                 x * TILE_SIZE + TILE_SIZE, y * TILE_SIZE + TILE_SIZE,
@@ -205,7 +210,6 @@ class GamePanel extends JPanel implements ActionListener {
                 this
         );
     }
-
     @Override
     public void actionPerformed(ActionEvent e) {
         movePacman();
