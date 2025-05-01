@@ -15,7 +15,7 @@ import MazeGeneration.MazeGeneration;
 
 public class PacManGame {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         // Set up the game window
         JFrame frame = new JFrame("Simple Pacman");
         GamePanel panel = new GamePanel();
@@ -57,7 +57,6 @@ class GamePanel extends JPanel implements ActionListener {
     private int score = 0;
     private boolean gameWon = false;
     private boolean gameOver = false;
-    private boolean usingPreviousMap = false;
 
     private long lastWakaTime = 0;
 
@@ -77,15 +76,15 @@ class GamePanel extends JPanel implements ActionListener {
     private int catMoveCounter = 0;
     private final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
 
-    public GamePanel() throws IOException {
-        if (DrawComponents.theme.equals("standard"))
-        {
-            setBackground(Color.BLACK);
-        }
-        else if (DrawComponents.theme.equals("outdoor"))
-        {
-            setBackground(new Color(150,110,0));
-        }
+    // per-ghost scatter state
+    private boolean[] catScattering;
+    private int[] catScatterTimer;
+    private int[] scatterDx, scatterDy;
+    private final int SCATTER_DURATION = 10;
+
+
+    public GamePanel() {
+        setBackground(Color.BLACK);
         setFocusable(true);
 
         // Generate initial maze
@@ -93,8 +92,6 @@ class GamePanel extends JPanel implements ActionListener {
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
-
-        DrawComponents.loadSprites();
 
         // Play intro sound
         SoundPlayer.playSound("sounds/intro.wav");
@@ -130,13 +127,9 @@ class GamePanel extends JPanel implements ActionListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
+
         // Draw all game elements
-        try {
-            DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS, usingPreviousMap);
-            usingPreviousMap = true;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
@@ -210,83 +203,196 @@ class GamePanel extends JPanel implements ActionListener {
     private void movePacman() {
         if (gameWon || gameOver) return;
 
+        // 1) store old Pac-Man pos
+        int prevPX = pacmanX, prevPY = pacmanY;
+
+        // 2) compute next cell
         int newX = pacmanX + dx;
         int newY = pacmanY + dy;
 
-        if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && maze[newY][newX] == 0) {
-            pacmanX = newX;
-            pacmanY = newY;
+        // 3) only move if not a wall
+        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1)
+            return;
 
-            if (dots[pacmanY][pacmanX]) {
-                dots[pacmanY][pacmanX] = false;
-                score += 10;
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastWakaTime >= 1000) {
-                    SoundPlayer.playSound("sounds/waka.wav");
-                    lastWakaTime = currentTime;
-                }
-                if (checkWin()) {
-                    gameWon = true;
-                    timer.stop();
-                }
+        pacmanX = newX;
+        pacmanY = newY;
+
+        // 4) eat dots
+        if (dots[pacmanY][pacmanX]) {
+            dots[pacmanY][pacmanX] = false;
+            score += 10;
+            long now = System.currentTimeMillis();
+            if (now - lastWakaTime >= 1000) {
+                SoundPlayer.playSound("sounds/waka.wav");
+                lastWakaTime = now;
             }
+            if (checkWin()) {
+                gameWon = true;
+                timer.stop();
+                return;
+            }
+        }
 
-            if (powerPellets[pacmanY][pacmanX]) {
-                powerPellets[pacmanY][pacmanX] = false;
-                poweredUp = true;
-                powerTimer = 50;
-                SoundPlayer.playSound("sounds/powerup.wav");
+        // 5) eat power pellet
+        if (powerPellets[pacmanY][pacmanX]) {
+            powerPellets[pacmanY][pacmanX] = false;
+            poweredUp = true;
+            powerTimer = 40;
+            score += 50;
+            SoundPlayer.playSound("sounds/powerup.wav");
+        }
+
+        // 6) now handle any ghost collisions
+        for (int i = 0; i < catPositions.size(); i++) {
+            Point cat = catPositions.get(i);
+
+            if (cat.x == pacmanX && cat.y == pacmanY) {
+                if (poweredUp && !catScattering[i]) {
+                    // trigger scatter
+                    catScattering[i]   = true;
+                    catScatterTimer[i] = SCATTER_DURATION;
+                    score += 100;
+                    SoundPlayer.playSound("sounds/eatghost.wav");
+
+                    // compute vector away from *previous* Pac-Man pos
+                    int ddx = cat.x - prevPX;
+                    int ddy = cat.y - prevPY;
+                    if (ddx == 0 && ddy == 0) {
+                        // fallback: try all 4 directions, pick the one farthest from Pac-Man
+                        int bestDist = -1;
+                        int[] dxs = {-1,1,0,0}, dys = {0,0,-1,1};
+                        for (int j = 0; j < 4; j++) {
+                            int tx = cat.x + dxs[j], ty = cat.y + dys[j];
+                            if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) continue;
+                            if (maze[ty][tx] == 1) continue;
+                            int dist = Math.abs(tx - pacmanX) + Math.abs(ty - pacmanY);
+                            if (dist > bestDist) {
+                                bestDist   = dist;
+                                scatterDx[i] = dxs[j];
+                                scatterDy[i] = dys[j];
+                            }
+                        }
+                    } else {
+                        // straight‐line signum vector
+                        if (Math.abs(ddx) > Math.abs(ddy)) {
+                            scatterDx[i] = Integer.signum(ddx);
+                            scatterDy[i] = 0;
+                        } else {
+                            scatterDx[i] = 0;
+                            scatterDy[i] = Integer.signum(ddy);
+                        }
+                    }
+                }
+                else if (!poweredUp && !catScattering[i]) {
+                    // unpowered‐up collision → game over
+                    gameOver = true;
+                    timer.stop();
+                    return;
+                }
             }
         }
     }
+
+
+
 
     private void moveGhost() {
         if (gameWon || gameOver) return;
 
         for (int i = 0; i < catPositions.size(); i++) {
+            // skip until this cat is released
             if (catReleaseTimers[i] > 0) {
                 catReleaseTimers[i]--;
                 continue;
             }
 
             Point cat = catPositions.get(i);
-            int catX = cat.x;
-            int catY = cat.y;
 
-            int bestDx = 0;
-            int bestDy = 0;
-            int minDistance = Integer.MAX_VALUE;
+            // --- 1) scatter phase ---
+            if (catScattering[i]) {
+                // try to move in the precomputed run-away direction
+                int nx = cat.x + scatterDx[i];
+                int ny = cat.y + scatterDy[i];
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && maze[ny][nx] == 0) {
+                    catPositions.set(i, new Point(nx, ny));
+                }
+                // count down scatter timer
+                if (--catScatterTimer[i] <= 0) {
+                    catScattering[i] = false;
+                }
+                continue;
+            }
 
-            int[] dxs = {-1, 1, 0, 0};
-            int[] dys = {0, 0, -1, 1};
+            // --- 2) normal chase AI ---
+            int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
+            int[] dxs = { -1, 1, 0, 0 };
+            int[] dys = { 0, 0, -1, 1 };
 
             for (int j = 0; j < 4; j++) {
-                int newX = catX + dxs[j];
-                int newY = catY + dys[j];
-                if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && maze[newY][newX] == 0) {
-                    int distance = Math.abs(newX - pacmanX) + Math.abs(newY - pacmanY);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        bestDx = dxs[j];
-                        bestDy = dys[j];
-                    }
+                int tx = cat.x + dxs[j];
+                int ty = cat.y + dys[j];
+                if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) continue;
+                if (maze[ty][tx] == 1) continue;
+
+                int dist = Math.abs(tx - pacmanX) + Math.abs(ty - pacmanY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    bestDx = dxs[j];
+                    bestDy = dys[j];
                 }
             }
 
-            int nextX = catX + bestDx;
-            int nextY = catY + bestDy;
+            int nextX = cat.x + bestDx;
+            int nextY = cat.y + bestDy;
 
-            catPositions.set(i, new Point(nextX, nextY));
-
-            if (pacmanX == nextX && pacmanY == nextY) {
+            // --- 3) collision check & trigger scatter or game over ---
+            if (nextX == pacmanX && nextY == pacmanY) {
                 if (poweredUp) {
-                    catPositions.set(i, new Point(10, 10));
+                    // start scatter for this cat
+                    catScattering[i]   = true;
+                    catScatterTimer[i] = SCATTER_DURATION;
                     score += 100;
                     SoundPlayer.playSound("sounds/eatghost.wav");
+
+                    // compute run-away vector
+                    int dx = cat.x - pacmanX;
+                    int dy = cat.y - pacmanY;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        scatterDx[i] = Integer.signum(dx);
+                        scatterDy[i] = 0;
+                    } else {
+                        scatterDx[i] = 0;
+                        scatterDy[i] = Integer.signum(dy);
+                    }
+                    // skip updating position this tick
+                    continue;
                 } else {
                     gameOver = true;
                     timer.stop();
+                    return;
                 }
+            }
+
+            // --- 4) commit normal move ---
+            catPositions.set(i, new Point(nextX, nextY));
+        }
+    }
+
+
+    public class SoundPlayer {
+        public static void playSound(String soundFileName) {
+            try {
+                File soundFile = new File(soundFileName);
+                if (soundFile.exists()) {
+                    AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInput);
+                    clip.start();
+                } else {
+                    System.out.println("Sound file not found: " + soundFileName);
+                }
+            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -312,7 +418,6 @@ class GamePanel extends JPanel implements ActionListener {
         gameOver = false;
         mouthOpen = true;
         poweredUp = false;
-        usingPreviousMap = false;
         powerTimer = 0;
         frame = 0;
         catFrame = 0;
@@ -329,6 +434,13 @@ class GamePanel extends JPanel implements ActionListener {
         catPositions.add(new Point(10, 10));
 
         catReleaseTimers = new int[]{0, 20, 40};
+
+        int n = catPositions.size();
+        catScattering   = new boolean[n];
+        catScatterTimer = new int   [n];
+        scatterDx       = new int   [n];
+        scatterDy       = new int   [n];
+
 
         timer.start();
     }
