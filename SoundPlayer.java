@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public class SoundPlayer {
     public static void playSound(String soundFileName) {
-        boolean soundEnabled = false;
+        boolean soundEnabled = true;
         if (soundEnabled) {
             try {
                 File soundFile = new File(soundFileName);

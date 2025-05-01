@@ -452,23 +452,6 @@ class GamePanel extends JPanel implements ActionListener {
             }
         }
     }
-    public class SoundPlayer {
-        public static void playSound(String soundFileName) {
-            try {
-                File soundFile = new File(soundFileName);
-                if (soundFile.exists()) {
-                    AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundFile);
-                    Clip clip = AudioSystem.getClip();
-                    clip.open(audioInput);
-                    clip.start();
-                } else {
-                    System.out.println("Sound file not found: " + soundFileName);
-                }
-            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     private boolean checkWin() {
         for (int row = 0; row < ROWS; row++) {
@@ -503,9 +486,9 @@ class GamePanel extends JPanel implements ActionListener {
         powerPellets = MazeGeneration.getPowerPellets();
 
         catPositions.clear();
-        catPositions.add(new Point(10, 10));
-        catPositions.add(new Point(10, 10));
-        catPositions.add(new Point(10, 10));
+        catPositions.add(new Point(9, 17));
+        catPositions.add(new Point(10, 17));
+        catPositions.add(new Point(11, 17));
 
         catReleaseTimers = new int[]{0, 20, 40};
 
