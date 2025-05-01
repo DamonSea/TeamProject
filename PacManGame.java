@@ -15,7 +15,7 @@ import MazeGeneration.MazeGeneration;
 
 public class PacManGame {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // Set up the game window
         JFrame frame = new JFrame("Simple Pacman");
         GamePanel panel = new GamePanel();
@@ -58,6 +58,8 @@ class GamePanel extends JPanel implements ActionListener {
     private boolean gameWon = false;
     private boolean gameOver = false;
 
+    private boolean usingPreviousMap = false;
+
     private long lastWakaTime = 0;
 
     private final Random random = new Random();
@@ -83,8 +85,17 @@ class GamePanel extends JPanel implements ActionListener {
     private final int SCATTER_DURATION = 10;
 
 
-    public GamePanel() {
-        setBackground(Color.BLACK);
+    public GamePanel() throws IOException {
+        DrawComponents.loadSprites();
+
+        if (DrawComponents.theme.equals("standard"))
+        {
+            setBackground(Color.BLACK);
+        }
+        else if (DrawComponents.theme.equals("outdoor"))
+        {
+            setBackground(new Color(150,110,0));
+        }
         setFocusable(true);
 
         // Generate initial maze
@@ -129,7 +140,12 @@ class GamePanel extends JPanel implements ActionListener {
         super.paintComponent(g);
 
         // Draw all game elements
-        DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS);
+        try {
+            DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS, usingPreviousMap);
+            usingPreviousMap = true;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
@@ -418,6 +434,7 @@ class GamePanel extends JPanel implements ActionListener {
         gameOver = false;
         mouthOpen = true;
         poweredUp = false;
+        usingPreviousMap = false;
         powerTimer = 0;
         frame = 0;
         catFrame = 0;
