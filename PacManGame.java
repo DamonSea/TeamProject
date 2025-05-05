@@ -280,12 +280,46 @@ class GamePanel extends JPanel implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+
+        if (xboxController != null) {
+            xboxController.poll();
+            EventQueue queue = xboxController.getEventQueue();
+            Event event = new Event();
+            while (queue.getNextEvent(event)) {
+                String componentName = event.getComponent().getName();
+                float value = event.getValue();
+
+                if (value == 1.0f) {
+                    if (componentName.equals("Button 6")) {
+                        resetGame();
+                    }
+                }
+
+                if (componentName.equals("Hat Switch")) {
+                    if (value == 0.25f) { // Up
+                        dx = 0;
+                        dy = -1;
+                    } else if (value == 0.50f) { // Right
+                        dx = 1;
+                        dy = 0;
+                    } else if (value == 0.75f) { // Down
+                        dx = 0;
+                        dy = 1;
+                    } else if (value == 1.00f) { // Left
+                        dx = -1;
+                        dy = 0;
+                    } else if (value == 0.0f) {}
+                }
+            }
+        }
+
+
         if (dying) {
             if (--deathTimer <= 0) {
                 dying = false;
                 lives--;
-                resetPositions();       // your normal “place Pac‑Man + ghosts back” code
-                waitingToStart = true;  // if you still want the READY! pause
+                resetPositions();
+                waitingToStart = true;
                 readyTimer = 20;
             }
             repaint();
