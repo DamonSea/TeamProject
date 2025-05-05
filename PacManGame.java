@@ -12,6 +12,10 @@ import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
 import MazeGeneration.MazeGeneration;
+import net.java.games.input.Controller;
+import net.java.games.input.ControllerEnvironment;
+import net.java.games.input.Event;
+import net.java.games.input.EventQueue;
 
 public class PacManGame {
 
@@ -58,11 +62,8 @@ class GamePanel extends JPanel implements ActionListener {
     private int score = 0;
     private boolean gameWon = false;
     private boolean gameOver = false;
-
     private boolean usingPreviousMap = false;
-
     private long lastWakaTime = 0;
-
     private final Random random = new Random();
 
     // Animation variables
@@ -92,8 +93,6 @@ class GamePanel extends JPanel implements ActionListener {
     // timer delay
     private boolean waitingToStart = false;
     private int readyTimer = 0;
-
-
 
     public GamePanel() throws IOException {
         DrawComponents.loadSprites();
@@ -382,7 +381,6 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-
     private void resetPositions() {
         pacmanX = 1;
         pacmanY = 1;
@@ -406,7 +404,6 @@ class GamePanel extends JPanel implements ActionListener {
         readyTimer = 20; // about 2 seconds if timer interval = 100ms
 
     }
-
 
     private void moveGhost() {
         if (gameWon || gameOver) return;
@@ -543,8 +540,6 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     private int level = 1; // start from level one
-
-
 
     private void resetGame() {
         if (gameWon) {
