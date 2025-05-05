@@ -87,6 +87,13 @@ class GamePanel extends JPanel implements ActionListener {
     private int[] scatterDx, scatterDy;
     private final int SCATTER_DURATION = 10;
 
+    // Lives
+    private int lives = 3;
+    // timer delay
+    private boolean waitingToStart = false;
+    private int readyTimer = 0;
+
+
 
     public GamePanel() throws IOException {
         DrawComponents.loadSprites();
@@ -164,6 +171,10 @@ class GamePanel extends JPanel implements ActionListener {
 
         DrawComponents.drawScore(g, score);
 
+        g.setColor(Color.WHITE);
+        g.drawString("Lives: " + lives, 20, 30);
+
+
         DrawComponents.drawLevel(g, level); //calls drawLevel to draw current level
 
         // Draw win/lose messages
@@ -175,6 +186,13 @@ class GamePanel extends JPanel implements ActionListener {
             DrawComponents.drawGameOverMessage(g);
             DrawComponents.drawRestartMessage(g);
         }
+
+        if (waitingToStart) {
+            g.setColor(Color.YELLOW);
+            g.setFont(new Font("Arial", Font.BOLD, 24));
+            g.drawString("READY!", getWidth() / 2 - 50, getHeight() / 2);
+        }
+
     }
 
     private void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
@@ -216,6 +234,22 @@ class GamePanel extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         movePacman();
+
+        if (waitingToStart) {
+            readyTimer--;
+            if (readyTimer <= 0) {
+                waitingToStart = false;
+            }
+            repaint();
+            return; // skip moving pacman/ghosts while waiting
+        }
+
+        if (!gameOver && !gameWon && checkWin()) {
+            gameWon = true;
+            timer.stop();
+            repaint();
+            return;
+        }
 
         // Animate Pacman's mouth
         mouthOpen = !mouthOpen;
@@ -335,9 +369,13 @@ class GamePanel extends JPanel implements ActionListener {
                     }
                 }
                 else if (!poweredUp && !catScattering[i]) {
-                    // unpowered‐up collision → game over
-                    gameOver = true;
-                    timer.stop();
+                    lives--;
+                    if (lives > 0) {
+                        resetPositions();
+                    } else {
+                        gameOver = true;
+                        timer.stop();
+                    }
                     return;
                 }
             }
@@ -345,6 +383,29 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
 
+    private void resetPositions() {
+        pacmanX = 1;
+        pacmanY = 1;
+        dx = 0;
+        dy = 0;
+
+        catPositions.clear();
+        catPositions.add(new Point(9, 18));
+        catPositions.add(new Point(10, 18));
+        catPositions.add(new Point(11, 18));
+
+        catReleaseTimers = new int[]{0, 20, 40};
+
+        int n = catPositions.size();
+        catScattering   = new boolean[n];
+        catScatterTimer = new int   [n];
+        scatterDx       = new int   [n];
+        scatterDy       = new int   [n];
+
+        waitingToStart = true;
+        readyTimer = 20; // about 2 seconds if timer interval = 100ms
+
+    }
 
 
     private void moveGhost() {
@@ -415,8 +476,13 @@ class GamePanel extends JPanel implements ActionListener {
                     }
                     return; // skip move this tick
                 } else {
-                    gameOver = true;
-                    timer.stop();
+                    lives--;
+                    if (lives > 0) {
+                        resetPositions();
+                    } else {
+                        gameOver = true;
+                        timer.stop();
+                    }
                     return;
                 }
             }
