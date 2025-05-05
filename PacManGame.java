@@ -95,6 +95,7 @@ class GamePanel extends JPanel implements ActionListener {
     private int readyTimer = 0;
     Controller xboxController = null;
 
+    //constuctor
     public GamePanel() throws IOException {
         // Find the Xbox controller
         Controller[] controllers = ControllerEnvironment.getDefaultEnvironment().getControllers();
@@ -103,6 +104,11 @@ class GamePanel extends JPanel implements ActionListener {
                 xboxController = controller;
                 break;
             }
+        }
+
+        if (xboxController == null) {
+            System.out.println("Xbox Controller not found!");
+            System.exit(0);
         }
 
         DrawComponents.loadSprites();
@@ -242,6 +248,23 @@ class GamePanel extends JPanel implements ActionListener {
     }
     @Override
     public void actionPerformed(ActionEvent e) {
+
+        xboxController.poll();
+        // Get all events
+        EventQueue queue = xboxController.getEventQueue();
+        Event event = new Event();
+        while (queue.getNextEvent(event)) {
+            String componentName = event.getComponent().getName();
+            float value = event.getValue();
+
+            // Print button presses
+            if (value == 1.0f) {
+                if (componentName.equals("Button 6")){
+                    resetGame();
+                }
+            }
+        }
+
         movePacman();
 
         if (waitingToStart) {
