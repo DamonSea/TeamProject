@@ -144,7 +144,7 @@ class GamePanel extends JPanel implements ActionListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
-                if ((gameWon || gameOver) && key == KeyEvent.VK_R) {
+                if ((gameWon || gameOver) || key == KeyEvent.VK_R) {
                     resetGame();
                 } else {
                     switch (key) {
