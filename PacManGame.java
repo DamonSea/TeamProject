@@ -93,8 +93,18 @@ class GamePanel extends JPanel implements ActionListener {
     // timer delay
     private boolean waitingToStart = false;
     private int readyTimer = 0;
+    Controller xboxController = null;
 
     public GamePanel() throws IOException {
+        // Find the Xbox controller
+        Controller[] controllers = ControllerEnvironment.getDefaultEnvironment().getControllers();
+        for (Controller controller : controllers) {
+            if (controller.getType() == Controller.Type.GAMEPAD) {
+                xboxController = controller;
+                break;
+            }
+        }
+
         DrawComponents.loadSprites();
 
         if (DrawComponents.theme.equals("standard"))
