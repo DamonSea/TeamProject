@@ -95,6 +95,13 @@ class GamePanel extends JPanel implements ActionListener {
     private int readyTimer = 0;
     Controller xboxController = null;
 
+    private boolean dying = false;
+    private int deathTimer = 0;
+    private static final int DEATH_DURATION = 20;
+    private Image deathSprite;
+    private static final int DEATH_FRAMES   = 6;
+
+
     //constuctor
     public GamePanel() throws IOException {
         // Find the Xbox controller
@@ -136,6 +143,8 @@ class GamePanel extends JPanel implements ActionListener {
         catSpriteSheet = new ImageIcon("cats.png").getImage();
         catScaredSpriteSheet = new ImageIcon("cats_scared.png").getImage();
         catEyesSpriteSheet = new ImageIcon("cat_eyes.png").getImage();
+        deathSprite = new ImageIcon("rat_death.png").getImage();
+
 
 
         // Add keyboard controls
@@ -163,10 +172,10 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     @Override
-    public void paintComponent(Graphics g) {
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Draw all game elements
+        // 1) background: maze, dots, pellets
         try {
             DrawComponents.drawMaze(g, maze, TILE_SIZE, ROWS, COLS, usingPreviousMap);
             usingPreviousMap = true;
@@ -175,28 +184,52 @@ class GamePanel extends JPanel implements ActionListener {
         }
         DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
         DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
-        DrawComponents.drawPacman(g, ratSprite, this, frame, frameCount, TILE_SIZE, pacmanX, pacmanY, poweredUp, mouthOpen);
 
-        // Draw each cat
+        // 2) draw all ghosts
         for (int i = 0; i < catPositions.size(); i++) {
             Point p = catPositions.get(i);
             drawCat(g, i, catFrame, p.x, p.y);
         }
 
-        DrawComponents.drawScore(g, score);
+        // 3) death animation overlay
+        if (dying) {
+            int w     = deathSprite.getWidth(null)  / DEATH_FRAMES;
+            int h     = deathSprite.getHeight(null);
+            int phase = ((DEATH_DURATION - deathTimer) * DEATH_FRAMES) / DEATH_DURATION;
+            phase = Math.max(0, Math.min(DEATH_FRAMES - 1, phase));
 
+            // draw the strip at Pac‑Man’s last position
+            g.drawImage(deathSprite,
+                    pacmanX * TILE_SIZE,            pacmanY * TILE_SIZE,
+                    pacmanX * TILE_SIZE + TILE_SIZE,pacmanY * TILE_SIZE + TILE_SIZE,
+                    phase * w, 0, phase * w + w, h,
+                    this
+            );
+
+            // draw UI on top
+            DrawComponents.drawScore(g, score);
+            g.setColor(Color.WHITE);
+            g.drawString("Lives: " + lives, 20, 30);
+            return;  // nothing else should overpaint it
+        }
+
+        // 4) normal Pac‑Man
+        DrawComponents.drawPacman(g, ratSprite, this,
+                frame, frameCount,
+                TILE_SIZE, pacmanX, pacmanY,
+                poweredUp, mouthOpen
+        );
+
+        // 5) UI, level, messages
+        DrawComponents.drawScore(g, score);
         g.setColor(Color.WHITE);
         g.drawString("Lives: " + lives, 20, 30);
+        DrawComponents.drawLevel(g, level);
 
-
-        DrawComponents.drawLevel(g, level); //calls drawLevel to draw current level
-
-        // Draw win/lose messages
         if (gameWon) {
             DrawComponents.drawWinMessage(g);
             DrawComponents.drawRestartMessage(g);
-        }
-        if (gameOver) {
+        } else if (gameOver) {
             DrawComponents.drawGameOverMessage(g);
             DrawComponents.drawRestartMessage(g);
         }
@@ -204,9 +237,8 @@ class GamePanel extends JPanel implements ActionListener {
         if (waitingToStart) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, 24));
-            g.drawString("READY!", getWidth() / 2 - 50, getHeight() / 2);
+            g.drawString("READY!", getWidth()/2 - 50, getHeight()/2);
         }
-
     }
 
     private void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
@@ -245,25 +277,20 @@ class GamePanel extends JPanel implements ActionListener {
                 this
         );
     }
+
     @Override
     public void actionPerformed(ActionEvent e) {
-
-        if (xboxController != null) {
-            xboxController.poll();
-            EventQueue queue = xboxController.getEventQueue();
-            Event event = new Event();
-            while (queue.getNextEvent(event)) {
-                String componentName = event.getComponent().getName();
-                float value = event.getValue();
-
-                if (value == 1.0f) {
-                    if (componentName.equals("Button 6")) {
-                        resetGame();
-                    }
-                }
+        if (dying) {
+            if (--deathTimer <= 0) {
+                dying = false;
+                lives--;
+                resetPositions();       // your normal “place Pac‑Man + ghosts back” code
+                waitingToStart = true;  // if you still want the READY! pause
+                readyTimer = 20;
             }
+            repaint();
+            return;
         }
-
         movePacman();
 
         if (waitingToStart) {
@@ -399,15 +426,14 @@ class GamePanel extends JPanel implements ActionListener {
                         }
                     }
                 }
-                else if (!poweredUp && !catScattering[i]) {
-                    lives--;
-                    if (lives > 0) {
-                        resetPositions();
-                    } else {
-                        gameOver = true;
-                        timer.stop();
-                    }
+                else if (!poweredUp && !catScattering[i] && !dying) {
+                    // start death animation instead of instantly resetting
+                    dying= true;
+                    deathTimer = DEATH_DURATION;
+                    // play the death sound
+                    SoundPlayer.playSound("sounds/death.wav");
                     return;
+
                 }
             }
         }
