@@ -107,8 +107,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
 
         if (xboxController == null) {
-            System.out.println("Xbox Controller not found!");
-            System.exit(0);
+            System.out.println("Xbox Controller not found! Running keyboard-only mode.");
         }
 
         DrawComponents.loadSprites();
@@ -249,18 +248,18 @@ class GamePanel extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
 
-        xboxController.poll();
-        // Get all events
-        EventQueue queue = xboxController.getEventQueue();
-        Event event = new Event();
-        while (queue.getNextEvent(event)) {
-            String componentName = event.getComponent().getName();
-            float value = event.getValue();
+        if (xboxController != null) {
+            xboxController.poll();
+            EventQueue queue = xboxController.getEventQueue();
+            Event event = new Event();
+            while (queue.getNextEvent(event)) {
+                String componentName = event.getComponent().getName();
+                float value = event.getValue();
 
-            // Print button presses
-            if (value == 1.0f) {
-                if (componentName.equals("Button 6")){
-                    resetGame();
+                if (value == 1.0f) {
+                    if (componentName.equals("Button 6")) {
+                        resetGame();
+                    }
                 }
             }
         }
