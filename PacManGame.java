@@ -72,6 +72,7 @@ class GamePanel extends JPanel implements ActionListener {
     private Image catSpriteSheet;
     private Image catScaredSpriteSheet;
     private Image catEyesSpriteSheet;
+    private Image cageSpriteSheet;
     private int frame = 0;
     private final int frameCount = 4; // Number of frames for rat animation
     private int catFrame = 0;
@@ -80,6 +81,8 @@ class GamePanel extends JPanel implements ActionListener {
     // Cat movement and animation
     private List<Point> catPositions = new ArrayList<>();
     private int[] catReleaseTimers = {0, 20, 40};
+    private int[] catRespawnDelay;
+    private static final int RESPAWN_DELAY_TICKS = 10; // 1 second = 10 ticks
     private int catMoveCounter = 0;
     private final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
 
@@ -88,6 +91,10 @@ class GamePanel extends JPanel implements ActionListener {
     private int[] catScatterTimer;
     private int[] scatterDx, scatterDy;
     private final int SCATTER_DURATION = 10;
+
+    private boolean cageDoorOpen = false;
+    private int cageDoorTimer = 0;
+    private static final int CAGE_DOOR_OPEN_TIME = 10; // ticks (adjust if needed)
 
     // Lives
     private int lives = 3;
@@ -145,6 +152,7 @@ class GamePanel extends JPanel implements ActionListener {
         catScaredSpriteSheet = new ImageIcon("cats_scared.png").getImage();
         catEyesSpriteSheet = new ImageIcon("cat_eyes.png").getImage();
         deathSprite = new ImageIcon("rat_death.png").getImage();
+        cageSpriteSheet = new ImageIcon("Cage.png").getImage();
 
 
 
@@ -183,8 +191,36 @@ class GamePanel extends JPanel implements ActionListener {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        DrawComponents.drawDots(g, dots, TILE_SIZE, ROWS, COLS);
-        DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLS; col++) {
+                // Skip cage zone (3x3 center area)
+                if (col >= 9 && col <= 11 && row >= 9 && row <= 11) continue;
+
+                if (dots[row][col]) {
+                    g.setColor(Color.WHITE);
+                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 3, row * TILE_SIZE + TILE_SIZE / 3, TILE_SIZE / 3, TILE_SIZE / 3);
+                }
+
+                if (powerPellets[row][col]) {
+                    g.setColor(Color.YELLOW);
+                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 4, row * TILE_SIZE + TILE_SIZE / 4, TILE_SIZE / 2, TILE_SIZE / 2);
+                }
+            }
+        }
+
+        int cageFrameWidth = cageSpriteSheet.getWidth(null) / 2;
+        int cageFrameHeight = cageSpriteSheet.getHeight(null);
+        int sx = cageDoorOpen ? cageFrameWidth : 0;
+
+        int cageX = 9 * TILE_SIZE;
+        int cageY = 9 * TILE_SIZE;
+
+        g.drawImage(cageSpriteSheet,
+                cageX, cageY,
+                cageX + TILE_SIZE * 3, cageY + TILE_SIZE * 3,
+                sx, 0, sx + cageFrameWidth, cageFrameHeight,
+                this
+        );
 
         // 2) draw all ghosts
         for (int i = 0; i < catPositions.size(); i++) {
@@ -377,6 +413,14 @@ class GamePanel extends JPanel implements ActionListener {
             catMoveCounter = 0;
         }
 
+        // Cage door animation timer
+        if (cageDoorOpen && cageDoorTimer > 0) {
+            cageDoorTimer--;
+            if (cageDoorTimer == 0) {
+                cageDoorOpen = false;
+            }
+        }
+
         repaint();
     }
 
@@ -438,39 +482,19 @@ class GamePanel extends JPanel implements ActionListener {
             if (cat.x == pacmanX && cat.y == pacmanY) {
                 if (poweredUp && !catScattering[i]) {
                     // trigger scatter
-                    catScattering[i]   = true;
+                    catScattering[i] = true;
                     catScatterTimer[i] = SCATTER_DURATION;
+                    catRespawnDelay[i] = 0; // start delay counter from zero
                     score += 100;
                     SoundPlayer.playSound("sounds/eatghost.wav");
+                    scatterDx[i] = Integer.compare(10, cat.x);
+                    scatterDy[i] = Integer.compare(10, cat.y);
 
-                    // compute vector away from *previous* Pac-Man pos
-                    int ddx = cat.x - prevPX;
-                    int ddy = cat.y - prevPY;
-                    if (ddx == 0 && ddy == 0) {
-                        // fallback: try all 4 directions, pick the one farthest from Pac-Man
-                        int bestDist = -1;
-                        int[] dxs = {-1,1,0,0}, dys = {0,0,-1,1};
-                        for (int j = 0; j < 4; j++) {
-                            int tx = cat.x + dxs[j], ty = cat.y + dys[j];
-                            if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) continue;
-                            if (maze[ty][tx] == 1) continue;
-                            int dist = Math.abs(tx - pacmanX) + Math.abs(ty - pacmanY);
-                            if (dist > bestDist) {
-                                bestDist   = dist;
-                                scatterDx[i] = dxs[j];
-                                scatterDy[i] = dys[j];
-                            }
-                        }
-                    } else {
-                        // straight‐line signum vector
-                        if (Math.abs(ddx) > Math.abs(ddy)) {
-                            scatterDx[i] = Integer.signum(ddx);
-                            scatterDy[i] = 0;
-                        } else {
-                            scatterDx[i] = 0;
-                            scatterDy[i] = Integer.signum(ddy);
-                        }
-                    }
+                    // set target direction TOWARD cage center (10,10)
+                    int dxToCage = Integer.compare(10, cat.x);
+                    int dyToCage = Integer.compare(10, cat.y);
+                    scatterDx[i] = dxToCage;
+                    scatterDy[i] = dyToCage;
                 }
                 else if (!poweredUp && !catScattering[i] && !dying) {
                     // start death animation instead of instantly resetting
@@ -492,13 +516,14 @@ class GamePanel extends JPanel implements ActionListener {
         dy = 0;
 
         catPositions.clear();
-        catPositions.add(new Point(9, 18));
-        catPositions.add(new Point(10, 18));
-        catPositions.add(new Point(11, 18));
+        catPositions.add(new Point(9, 10));
+        catPositions.add(new Point(10, 10));
+        catPositions.add(new Point(11, 10));
 
         catReleaseTimers = new int[]{0, 20, 40};
 
         int n = catPositions.size();
+        catRespawnDelay = new int[n];
         catScattering   = new boolean[n];
         catScatterTimer = new int   [n];
         scatterDx       = new int   [n];
@@ -513,7 +538,38 @@ class GamePanel extends JPanel implements ActionListener {
         if (gameWon || gameOver) return;
 
         for (int i = 0; i < catPositions.size(); i++) {
-            // skip until this cat is released
+            if (catScattering[i]) {
+                Point cat = catPositions.get(i);
+                int targetX = 10, targetY = 10;
+
+                // If eyes have reached the cage
+                if (cat.x == targetX && cat.y == targetY) {
+                    if (catRespawnDelay[i] < RESPAWN_DELAY_TICKS) {
+                        catRespawnDelay[i]++;
+                    } else {
+                        catScattering[i] = false;
+                        catRespawnDelay[i] = 0;
+                        catReleaseTimers[i] = 10;
+                        catPositions.set(i, new Point(9, 10)); // just outside cage
+                    }
+                    continue;
+                }
+
+                // Move eyes toward cage
+                int dx = Integer.compare(targetX, cat.x);
+                int dy = Integer.compare(targetY, cat.y);
+                int nx = cat.x + dx;
+                int ny = cat.y + dy;
+
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS &&
+                        (maze[ny][nx] == 0 || (nx >= 9 && nx <= 11 && ny >= 9 && ny <= 11))) {
+                    catPositions.set(i, new Point(nx, ny));
+                }
+
+                continue;
+            }
+
+            // Wait for release timer
             if (catReleaseTimers[i] > 0) {
                 catReleaseTimers[i]--;
                 continue;
@@ -521,29 +577,14 @@ class GamePanel extends JPanel implements ActionListener {
 
             Point cat = catPositions.get(i);
 
-            // --- 1) scatter phase ---
-            if (catScattering[i]) {
-                // try to move in the precomputed run-away direction
-                int nx = cat.x + scatterDx[i];
-                int ny = cat.y + scatterDy[i];
-                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && maze[ny][nx] == 0) {
-                    catPositions.set(i, new Point(nx, ny));
-                }
-                // count down scatter timer
-                if (--catScatterTimer[i] <= 0) {
-                    catScattering[i] = false;
-                }
-                continue;
-            }
-
-            // --- 2) normal chase AI ---
+            // Normal chase logic
             int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
-            int[] dxs = {-1, 1, 0, 0};
-            int[] dys = {0, 0, -1, 1};
+            int[] dxs = {-1, 1, 0, 0}, dys = {0, 0, -1, 1};
 
             for (int j = 0; j < 4; j++) {
                 int tx = cat.x + dxs[j];
                 int ty = cat.y + dys[j];
+
                 if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) continue;
                 if (maze[ty][tx] == 1) continue;
 
@@ -558,29 +599,17 @@ class GamePanel extends JPanel implements ActionListener {
             int nextX = cat.x + bestDx;
             int nextY = cat.y + bestDy;
 
-// --- 3) collision check & trigger scatter or game over ---
             if (nextX == pacmanX && nextY == pacmanY) {
                 if (poweredUp) {
                     catScattering[i] = true;
-                    catScatterTimer[i] = SCATTER_DURATION;
-                    score += 100;
+                    catRespawnDelay[i] = 0;
                     SoundPlayer.playSound("sounds/eatghost.wav");
-
-                    int dx = cat.x - pacmanX;
-                    int dy = cat.y - pacmanY;
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        scatterDx[i] = Integer.signum(dx);
-                        scatterDy[i] = 0;
-                    } else {
-                        scatterDx[i] = 0;
-                        scatterDy[i] = Integer.signum(dy);
-                    }
-                    return; // skip move this tick
+                    score += 100;
+                    continue;
                 } else {
                     lives--;
-                    if (lives > 0) {
-                        resetPositions();
-                    } else {
+                    if (lives > 0) resetPositions();
+                    else {
                         gameOver = true;
                         timer.stop();
                     }
@@ -588,49 +617,21 @@ class GamePanel extends JPanel implements ActionListener {
                 }
             }
 
-// --- 4) bounce logic if another ghost is in the way ---
             boolean occupied = false;
             for (int j = 0; j < catPositions.size(); j++) {
-                if (j != i) {
-                    Point otherCat = catPositions.get(j);
-                    if (otherCat.x == nextX && otherCat.y == nextY) {
-                        occupied = true;
-                        break;
-                    }
+                if (j != i && catPositions.get(j).equals(new Point(nextX, nextY))) {
+                    occupied = true;
+                    break;
                 }
             }
 
             if (!occupied) {
                 catPositions.set(i, new Point(nextX, nextY));
-            } else {
-                // Try alternate directions in random order
-                List<Integer> dirs = List.of(0, 1, 2, 3);
-                List<Integer> shuffled = new ArrayList<>(dirs);
-                java.util.Collections.shuffle(shuffled);
-
-                for (int dir : shuffled) {
-                    int altX = cat.x + dxs[dir];
-                    int altY = cat.y + dys[dir];
-
-                    if (altX < 0 || altX >= COLS || altY < 0 || altY >= ROWS) continue;
-                    if (maze[altY][altX] == 1) continue;
-
-                    boolean occupiedAlt = false;
-                    for (int j = 0; j < catPositions.size(); j++) {
-                        if (j != i && catPositions.get(j).x == altX && catPositions.get(j).y == altY) {
-                            occupiedAlt = true;
-                            break;
-                        }
-                    }
-
-                    if (!occupiedAlt) {
-                        catPositions.set(i, new Point(altX, altY));
-                        break;
-                    }
-                }
             }
         }
     }
+
+
 
     private boolean checkWin() {
         for (int row = 0; row < ROWS; row++) {
@@ -666,21 +667,44 @@ class GamePanel extends JPanel implements ActionListener {
         catFrame = 0;
         catMoveCounter = 0;
 
+
         //generates a new maze map based on the level
         MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();
         dots = MazeGeneration.getDots();
         powerPellets = MazeGeneration.getPowerPellets();
+        // Make the 3x3 cage area solid and empty
+        for (int row = 9; row <= 11; row++) {
+            for (int col = 9; col <= 11; col++) {
+                maze[row][col] = 1; // block the cage walls
+                dots[row][col] = false;
+                powerPellets[row][col] = false;
+            }
+        }
+
+//  Open the cage center AND one entrance (e.g., from below)
+        maze[10][10] = 0; // center
+        maze[11][10] = 0; // entrance from bottom
+        maze[9][10] = 0; // allow ghost to exit upward after revive
+
 
         // Reset cat positions
-        catPositions.clear();
-        catPositions.add(new Point(9, 18));
-        catPositions.add(new Point(10, 18));
-        catPositions.add(new Point(11, 18));
+        catPositions.add(new Point(9, 10));
+        catPositions.add(new Point(10, 10));
+        catPositions.add(new Point(11, 10));
+        // Make the 3x3 cage area solid and empty
+        for (int row = 9; row <= 11; row++) {
+            for (int col = 9; col <= 11; col++) {
+                maze[row][col] = 1; // make it an obstacle
+                dots[row][col] = false;
+                powerPellets[row][col] = false;
+            }
+        }
 
         catReleaseTimers = new int[]{0, 20, 40};
 
         int n = catPositions.size();
+        catRespawnDelay = new int[n];
         catScattering   = new boolean[n];
         catScatterTimer = new int   [n];
         scatterDx       = new int   [n];
