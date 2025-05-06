@@ -12,6 +12,7 @@ import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
 import MazeGeneration.MazeGeneration;
+import net.java.games.input.Component;
 import net.java.games.input.Controller;
 import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.Event;
@@ -286,6 +287,8 @@ class GamePanel extends JPanel implements ActionListener {
             EventQueue queue = xboxController.getEventQueue();
             Event event = new Event();
             while (queue.getNextEvent(event)) {
+                Component comp = event.getComponent();
+                float joyValue = event.getValue();
                 String componentName = event.getComponent().getName();
                 float value = event.getValue();
 
@@ -310,9 +313,18 @@ class GamePanel extends JPanel implements ActionListener {
                         dy = 0;
                     } else if (value == 0.0f) {}
                 }
+
+                if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.X) {
+                    if (joyValue < -0.5f) { dx = -1; dy = 0; }  // move left
+                    else if (joyValue > 0.5f) { dx = 1; dy = 0; }  // move right
+                }
+                else if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.Y) {
+                    if (joyValue < -0.5f) { dx = 0; dy = -1; }  // move up
+                    else if (joyValue > 0.5f) { dx = 0; dy = 1; }  // move down
+                }
+
             }
         }
-
 
         if (dying) {
             if (--deathTimer <= 0) {
