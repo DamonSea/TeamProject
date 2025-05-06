@@ -22,7 +22,7 @@ public class PacManGame {
 
     public static void main(String[] args) throws IOException {
         // Set up the game window
-        JFrame frame = new JFrame("Simple Pacman");
+        JFrame frame = new JFrame("Rat-Man");
         GamePanel panel = new GamePanel();
 
         frame.add(panel);
