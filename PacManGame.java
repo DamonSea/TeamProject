@@ -19,18 +19,31 @@ import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
 
 public class PacManGame {
+    static JFrame frame;
+    static Menu menuPanel;
 
     public static void main(String[] args) throws IOException {
-        // Set up the game window
-        JFrame frame = new JFrame("Rat-Man");
-        GamePanel panel = new GamePanel();
 
-        frame.add(panel);
-        frame.setSize(610, 635);
+        // Set up the game window
+        frame = new JFrame("Rat-Man");
+
+        // Main Menu
+        menuPanel = new Menu();
+        frame.add(menuPanel);
+        frame.setSize(500, 500);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
         frame.setResizable(false);
+    }
+
+
+    public static void startGame() throws IOException {
+        frame.remove(menuPanel);
+        GamePanel panel = new GamePanel();
+        frame.add(panel);
+        frame.setSize(610, 635);
+        panel.requestFocusInWindow();
     }
 }
 
