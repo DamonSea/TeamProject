@@ -22,12 +22,12 @@ public class PacManGame {
     static JFrame frame;
     static Menu menuPanel;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, FontFormatException {
 
         // Set up the game window
         frame = new JFrame("Rat-Man");
 
-        // Main Menu
+        //Main Menu
         menuPanel = new Menu();
         frame.add(menuPanel);
         frame.setSize(500, 500);
@@ -37,6 +37,12 @@ public class PacManGame {
         frame.setResizable(false);
     }
 
+    public static void showSkins() throws IOException {
+        frame.remove(menuPanel);
+        SkinsMenu skinsMenu = new SkinsMenu();
+        frame.add(skinsMenu);
+        frame.revalidate();
+    }
 
     public static void startGame() throws IOException {
         frame.remove(menuPanel);
