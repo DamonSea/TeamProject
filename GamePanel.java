@@ -187,14 +187,13 @@ class GamePanel extends JPanel implements ActionListener {
                 }
 
                 // Game controls RatMan
-                if (!enteringName) {
-                    switch (key) {
-                        case KeyEvent.VK_LEFT -> { dx = -1; dy = 0; }
-                        case KeyEvent.VK_RIGHT -> { dx = 1; dy = 0; }
-                        case KeyEvent.VK_UP -> { dx = 0; dy = -1; }
-                        case KeyEvent.VK_DOWN -> { dx = 0; dy = 1; }
-                    }
+                switch (key) {
+                    case KeyEvent.VK_LEFT  -> player.setDirection(-1, 0);
+                    case KeyEvent.VK_RIGHT -> player.setDirection(1, 0);
+                    case KeyEvent.VK_UP    -> player.setDirection(0, -1);
+                    case KeyEvent.VK_DOWN  -> player.setDirection(0, 1);
                 }
+
             }
         });
 
