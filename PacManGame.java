@@ -47,6 +47,8 @@ class GamePanel extends JPanel implements ActionListener {
     private int pacmanY = 1;
     private int dx = 0;
     private int dy = 0;
+    private int lastDXMove;
+    private int lastDYMove;
 
     private boolean mouthOpen = true;
 
@@ -438,14 +440,41 @@ class GamePanel extends JPanel implements ActionListener {
 
         // 1) store old Pac-Man pos
         int prevPX = pacmanX, prevPY = pacmanY;
+        int newX = 0;
+        int newY = 0;
 
         // 2) compute next cell
-        int newX = pacmanX + dx;
-        int newY = pacmanY + dy;
+        if (dx != 0 || dy != 0)
+        {
+            newX = pacmanX + dx;
+            newY = pacmanY + dy;
+
+            if (!(newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1))
+            {
+                lastDXMove = dx;
+                lastDYMove = dy;
+                dx=0;
+                dy=0;
+            }
+            else
+            {
+                newX = newX - dx + lastDXMove;
+                newY = newY - dy + lastDYMove;
+            }
+
+        }
+        else
+        {
+            newX = pacmanX + lastDXMove;
+            newY = pacmanY + lastDYMove;
+        }
+
 
         // 3) only move if not a wall
         if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1)
+        {
             return;
+        }
 
         pacmanX = newX;
         pacmanY = newY;
