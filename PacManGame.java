@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.awt.Point;
 import java.util.Random;
-import javax.sound.sampled.*;
-import java.io.File;
 import java.io.IOException;
 import MazeGeneration.MazeGeneration;
 import net.java.games.input.Component;
@@ -178,12 +176,12 @@ class GamePanel extends JPanel implements ActionListener {
         SoundPlayer.playSound("sounds/intro.wav");
 
         // Load sprites
-        ratSprite = new ImageIcon("Rat.png").getImage();
-        catSpriteSheet = new ImageIcon("cats.png").getImage();
-        catScaredSpriteSheet = new ImageIcon("cats_scared.png").getImage();
-        catEyesSpriteSheet = new ImageIcon("cat_eyes.png").getImage();
-        deathSprite = new ImageIcon("rat_death.png").getImage();
-        cageSpriteSheet = new ImageIcon("Cage.png").getImage();
+        ratSprite = new ImageIcon("Images/Rat.png").getImage();
+        catSpriteSheet = new ImageIcon("Images/cats.png").getImage();
+        catScaredSpriteSheet = new ImageIcon("Images/cats_scared.png").getImage();
+        catEyesSpriteSheet = new ImageIcon("Images/cat_eyes.png").getImage();
+        deathSprite = new ImageIcon("Images/rat_death.png").getImage();
+        cageSpriteSheet = new ImageIcon("Images/Cage.png").getImage();
 
 
 

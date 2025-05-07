@@ -1,8 +1,6 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +10,7 @@ public class SkinsMenu extends JPanel
     BufferedImage ratSprite;
     public SkinsMenu() throws IOException {
         this.setLayout(null);
-        ratSprite = ImageIO.read(new File("Rat.png"));
+        ratSprite = ImageIO.read(new File("Images/Rat.png"));
         ImageIcon ratIcon = new ImageIcon(ratSprite.getSubimage(0, 0, 64, 64)
                 .getScaledInstance(250, 250, Image.SCALE_SMOOTH));
         JButton button1 = new JButton(ratIcon);
