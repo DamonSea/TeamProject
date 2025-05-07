@@ -471,37 +471,55 @@ class GamePanel extends JPanel implements ActionListener {
     private void movePacman() {
         if (gameWon || gameOver) return;
 
-        if (pacmanX == 0) {
+        if (pacmanX == 0)
+        {
             pacmanX = 18;
-        } else if (pacmanX == 19) {
+        }
+        else if (pacmanX == 19)
+        {
             pacmanX = 1;
         }
 
         // 1) store old Pac-Man pos
         int prevPX = pacmanX, prevPY = pacmanY;
-        int newX, newY;
+        int newX = 0;
+        int newY = 0;
 
         // 2) compute next cell
-        if (dx != 0 || dy != 0) {
+        newX = pacmanX + dx;
+        newY = pacmanY + dy;
+        if (dx != 0 || dy != 0)
+        {
             newX = pacmanX + dx;
             newY = pacmanY + dy;
-        } else {
+
+            if (!(newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1))
+            {
+                lastDXMove = dx;
+                lastDYMove = dy;
+                dx=0;
+                dy=0;
+            }
+            else
+            {
+                newX = newX - dx + lastDXMove;
+                newY = newY - dy + lastDYMove;
+            }
+
+        }
+        else
+        {
             newX = pacmanX + lastDXMove;
             newY = pacmanY + lastDYMove;
         }
-        // prevent RAtman from entering cage all direction
-        if ((newY >= 9 && newY <= 11 && newX >= 9 && newX <= 11) &&  //  Block entry into cage
-                !(newY == 9 && (newX == 8 || newX == 12)) &&  //  Allow movement along top wall
-                !(newY == 11 && (newX == 8 || newX == 12)) && //  Allow movement along bottom wall
-                !(newX == 8 && (newY == 9 || newY == 11)) &&  //  Allow movement along left wall
-                !(newX == 12 && (newY == 9 || newY == 11))) { // Block entry from the right
+
+
+        // 3) only move if not a wall
+        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1)
+        {
             return;
         }
 
-        // 3) only move if not a wall
-        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1) {
-            return;
-        }
         pacmanX = newX;
         pacmanY = newY;
 
@@ -556,7 +574,7 @@ class GamePanel extends JPanel implements ActionListener {
                     dying= true;
                     deathTimer = DEATH_DURATION;
                     // play the death sound
-                    SoundPlayer.playSound("sounds/death.wav");
+                    SoundPlayer.playSound("sounds/pacman_death.wav");
                     return;
 
                 }
