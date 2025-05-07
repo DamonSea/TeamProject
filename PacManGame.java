@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.awt.Point;
 import java.util.Random;
@@ -653,9 +654,12 @@ class GamePanel extends JPanel implements ActionListener {
         if (gameWon || gameOver) return;
 
         for (int i = 0; i < catPositions.size(); i++) {
+            if (i >= catScattering.length || i >= catRespawnDelay.length || i >= catReleaseTimers.length) continue;  // Prevent out-of-bounds error
+
+            // cat scatter moves back to cage
             if (catScattering[i]) {
                 Point cat = catPositions.get(i);
-                int targetX = 10, targetY = 10;
+                int targetX = 10, targetY = 10; // position of cage
 
                 // If eyes have reached the cage
                 if (cat.x == targetX && cat.y == targetY) {
@@ -665,8 +669,16 @@ class GamePanel extends JPanel implements ActionListener {
                         catScattering[i] = false;
                         catRespawnDelay[i] = 0;
                         catReleaseTimers[i] = 10;
-                        catPositions.set(i, new Point(9, 10)); // just outside cage
+                        //catPositions.set(i, new Point(9, 10)); // just outside cage
+                        // add cat position to move cats eye
+                        if (i % 3 == 0) {
+                            catPositions.set(i, new Point(9, 10)); // Left side of cage
+                        } else if (i % 3 == 1) {
+                            catPositions.set(i, new Point(10, 10)); // Center of cage
+                        } else {
+                        catPositions.set(i, new Point(11, 10)); // Right side of cage
                     }
+                }
                     continue;
                 }
 
@@ -690,9 +702,8 @@ class GamePanel extends JPanel implements ActionListener {
                 continue;
             }
 
-            Point cat = catPositions.get(i);
-
             // Normal chase logic
+            Point cat = catPositions.get(i);
             int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
             int[] dxs = {-1, 1, 0, 0}, dys = {0, 0, -1, 1};
 
@@ -716,7 +727,7 @@ class GamePanel extends JPanel implements ActionListener {
 
             if (nextX == pacmanX && nextY == pacmanY) {
                 if (poweredUp) {
-                    catScattering[i] = true;
+                    catScattering[i] = true; //cat turns in to eyes
                     catRespawnDelay[i] = 0;
                     SoundPlayer.playSound("sounds/eatghost.wav");
                     score += 100;
@@ -745,8 +756,6 @@ class GamePanel extends JPanel implements ActionListener {
             }
         }
     }
-
-
 
     private boolean checkWin() {
         for (int row = 0; row < ROWS; row++) {
@@ -808,6 +817,7 @@ class GamePanel extends JPanel implements ActionListener {
 
 
         // Reset cat positions
+        catPositions.clear(); // add to clear previous level cat positions
         catPositions.add(new Point(9, 10));
         catPositions.add(new Point(10, 10));
         catPositions.add(new Point(11, 10));
@@ -820,6 +830,10 @@ class GamePanel extends JPanel implements ActionListener {
             }
         }
 
+        // Open the cage center AND one entrance
+        maze[10][10] = 0; // Center of cage
+        maze[11][10] = 0; // Entrance from bottom
+        maze[9][10] = 0;  // allow ghost to exit upward after revive
         catReleaseTimers = new int[]{0, 20, 40};
 
         int n = catPositions.size();
@@ -829,6 +843,12 @@ class GamePanel extends JPanel implements ActionListener {
         scatterDx       = new int   [n];
         scatterDy       = new int   [n];
 
+        // reset the cat arrays
+        Arrays.fill(catScattering, false);
+        Arrays.fill(catRespawnDelay, 0);
+        Arrays.fill(catScatterTimer, 0);
+        Arrays.fill(scatterDx, 0);
+        Arrays.fill(scatterDy, 0);
 
         timer.start();
         requestFocusInWindow();

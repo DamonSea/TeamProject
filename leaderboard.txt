@@ -7,3 +7,5 @@ xxt,360
 xxt,340
 xxt,320
 xxt,350
+xxt,1760
+xxt,380
