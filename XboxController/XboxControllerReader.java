@@ -1,4 +1,4 @@
-//https://github.com/jinput/jinput/releases
+package XboxController;//https://github.com/jinput/jinput/releases
 //You need the Jar file added to the project
 
 import net.java.games.input.Controller;
