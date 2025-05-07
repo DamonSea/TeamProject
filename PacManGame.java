@@ -23,7 +23,7 @@ public class PacManGame {
 
     public static void main(String[] args) throws IOException, FontFormatException {
 
-        // Set up the game window
+        // Set up the game window.
         frame = new JFrame("Rat-Man");
 
         //Main Menu
