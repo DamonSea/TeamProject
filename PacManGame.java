@@ -45,6 +45,13 @@ public class PacManGame {
         frame.setSize(610, 635);
         panel.requestFocusInWindow();
     }
+
+    // Method to show the leaderboard window
+    public static void showLeaderboard() {
+        SwingUtilities.invokeLater(() -> {
+            new LeaderboardWindow().setVisible(true);
+        });
+    }
 }
 
 class GamePanel extends JPanel implements ActionListener {
@@ -81,6 +88,9 @@ class GamePanel extends JPanel implements ActionListener {
     private boolean usingPreviousMap = false;
     private long lastWakaTime = 0;
     private final Random random = new Random();
+    private boolean enteringName = false; // Input variable
+    private String playerInitials = "";
+    private boolean leaderboardShown = false;
 
     // Animation variables
     private Image ratSprite;
@@ -176,9 +186,44 @@ class GamePanel extends JPanel implements ActionListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
-                if ((gameWon || gameOver) || key == KeyEvent.VK_R) {
-                    resetGame();
-                } else {
+
+                //Advance to next level if won and reset game if over press R
+                if ((gameWon || gameOver) && key == KeyEvent.VK_R) {
+                    resetGame(); // Reset the game if game over or game won
+                    return;
+                }
+
+                if (gameOver && enteringName) {
+                    // Capture initials when Enter is pressed and initials are at least 3 characters long
+                    if (!leaderboardShown && key == KeyEvent.VK_ENTER && playerInitials.length() >= 3) {
+                        // Save score when Enter is pressed
+                        Leaderboard.saveScore(playerInitials, score);
+                        enteringName = false;  // Exit name entry mode
+                        leaderboardShown = true; // prevent showing again
+
+                        // Trigger repaint first to clear initials UI
+                        repaint();
+
+                        // Delay leaderboard window so it opens after repaint
+                        SwingUtilities.invokeLater(() -> {
+                            new LeaderboardWindow().setVisible(true);
+                        });
+
+                        // No immediate reset here; the user will view the leaderboard first
+                        return;
+                    }
+
+                    if (key == KeyEvent.VK_BACK_SPACE && playerInitials.length() > 0) {
+                        playerInitials = playerInitials.substring(0, playerInitials.length() - 1);
+                    }
+                    // Allow adding characters to initials if it's less than 3 characters
+                    else if (playerInitials.length() < 3 && Character.isLetterOrDigit(e.getKeyChar())) {
+                        playerInitials += e.getKeyChar();
+                    }
+                }
+
+                // Game controls RatMan
+                if (!enteringName) {
                     switch (key) {
                         case KeyEvent.VK_LEFT -> { dx = -1; dy = 0; }
                         case KeyEvent.VK_RIGHT -> { dx = 1; dy = 0; }
@@ -280,10 +325,18 @@ class GamePanel extends JPanel implements ActionListener {
 
         if (gameWon) {
             DrawComponents.drawWinMessage(g);
-            DrawComponents.drawRestartMessage(g);
+            DrawComponents.drawAdvanceLevelMessage(g);
         } else if (gameOver) {
             DrawComponents.drawGameOverMessage(g);
             DrawComponents.drawRestartMessage(g);
+            if (enteringName) {
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 20));
+                g.drawString("Enter Your Initials:", getWidth() / 2 - 100, getHeight() / 2 + 40);
+                g.drawString(playerInitials, getWidth() / 2 - 20, getHeight() / 2 + 70);
+                g.setFont(new Font("Arial", Font.PLAIN, 14));
+                g.drawString("(Press ENTER to submit)", getWidth() / 2 - 80, getHeight() / 2 + 95);
+            }
         }
 
         if (waitingToStart) {
@@ -381,10 +434,26 @@ class GamePanel extends JPanel implements ActionListener {
             if (--deathTimer <= 0) {
                 dying = false;
                 lives--;
+
+                if (lives <= 0) {
+                    gameOver = true;
+                    enteringName = true; // prompt for initials input
+                    //Leaderboard.saveScore(playerInitials, score); // Save the player's score when the game is over
+                    timer.stop();
+                    repaint();
+
+                    //SwingUtilities.invokeLater(() -> {
+                    //    new LeaderboardWindow().setVisible(true); // Show the leaderboard after the game ends
+                    //});
+
+                    return;
+                }
+
                 resetPositions();
                 waitingToStart = true;
                 readyTimer = 20;
             }
+
             repaint();
             return;
         }
@@ -708,6 +777,10 @@ class GamePanel extends JPanel implements ActionListener {
         frame = 0;
         catFrame = 0;
         catMoveCounter = 0;
+        lives = 3;
+        enteringName = false;
+        playerInitials = "";
+        leaderboardShown = false;
 
 
         //generates a new maze map based on the level
@@ -754,5 +827,7 @@ class GamePanel extends JPanel implements ActionListener {
 
 
         timer.start();
+        requestFocusInWindow();
+        repaint();
     }
 }

@@ -118,6 +118,12 @@ public class DrawComponents
         g.drawString("You Win!", 200, 250);
     }
 
+    public static void drawAdvanceLevelMessage(Graphics g) {
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("Press 'R' to Advance", 180, 300);
+    }
+
     public static void drawGameOverMessage(Graphics g) {
         g.setColor(Color.RED);
         g.setFont(new Font("Arial", Font.BOLD, 40));
