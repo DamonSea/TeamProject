@@ -375,7 +375,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
 
         // Pick which frame to show from the sprite sheet (each ghost has 2 frames for animation)
-        int frameIndex = catIndex * CAT_FRAME_COUNT + frame;
+        int frameIndex = (catScattering[catIndex]) ? frame : catIndex * CAT_FRAME_COUNT + frame;
         int sx = frameIndex * frameWidth;
         int sy = 0;
 
@@ -676,7 +676,7 @@ class GamePanel extends JPanel implements ActionListener {
                         } else if (i % 3 == 1) {
                             catPositions.set(i, new Point(10, 10)); // Center of cage
                         } else {
-                        catPositions.set(i, new Point(11, 10)); // Right side of cage
+                            catPositions.set(i, new Point(11, 10)); // Right side of cage
                     }
                 }
                     continue;
@@ -810,6 +810,9 @@ class GamePanel extends JPanel implements ActionListener {
             }
         }
 
+        // Open ONLY the ghost exit (RatMan cannot enter)
+        maze[9][10] = 0;  // Allow ghosts to exit upward after revive
+
 //  Open the cage center AND one entrance (e.g., from below)
         maze[10][10] = 0; // center
         maze[11][10] = 0; // entrance from bottom
@@ -821,19 +824,7 @@ class GamePanel extends JPanel implements ActionListener {
         catPositions.add(new Point(9, 10));
         catPositions.add(new Point(10, 10));
         catPositions.add(new Point(11, 10));
-        // Make the 3x3 cage area solid and empty
-        for (int row = 9; row <= 11; row++) {
-            for (int col = 9; col <= 11; col++) {
-                maze[row][col] = 1; // make it an obstacle
-                dots[row][col] = false;
-                powerPellets[row][col] = false;
-            }
-        }
 
-        // Open the cage center AND one entrance
-        maze[10][10] = 0; // Center of cage
-        maze[11][10] = 0; // Entrance from bottom
-        maze[9][10] = 0;  // allow ghost to exit upward after revive
         catReleaseTimers = new int[]{0, 20, 40};
 
         int n = catPositions.size();
