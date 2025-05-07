@@ -16,10 +16,6 @@ import java.util.Random;
 
 class GamePanel extends JPanel implements ActionListener {
 
-
-    private Player player = new Player();
-    private GameManager gameManager = new GameManager();
-
     // Game constants
     private final int TILE_SIZE = 30;
     private final int ROWS = 20;
@@ -34,7 +30,7 @@ class GamePanel extends JPanel implements ActionListener {
     private int lastDXMove;
     private int lastDYMove;
 
-//    private boolean mouthOpen = true;
+    private boolean mouthOpen = true;
 
     // Maze and collectibles
     private int[][] maze = new int[ROWS][COLS];
@@ -43,14 +39,14 @@ class GamePanel extends JPanel implements ActionListener {
 
     // Power-up state
     private boolean poweredUp = false;
-//    private int powerTimer = 0;
+    private int powerTimer = 0;
 
     // Score and game state
     private int score = 0;
     private boolean gameWon = false;
     private boolean gameOver = false;
     private boolean usingPreviousMap = false;
-//    private long lastWakaTime = 0;
+    private long lastWakaTime = 0;
     private final Random random = new Random();
     private boolean enteringName = false; // Input variable
     private String playerInitials = "";
@@ -187,13 +183,14 @@ class GamePanel extends JPanel implements ActionListener {
                 }
 
                 // Game controls RatMan
-                switch (key) {
-                    case KeyEvent.VK_LEFT  -> player.setDirection(-1, 0);
-                    case KeyEvent.VK_RIGHT -> player.setDirection(1, 0);
-                    case KeyEvent.VK_UP    -> player.setDirection(0, -1);
-                    case KeyEvent.VK_DOWN  -> player.setDirection(0, 1);
+                if (!enteringName) {
+                    switch (key) {
+                        case KeyEvent.VK_LEFT -> { dx = -1; dy = 0; }
+                        case KeyEvent.VK_RIGHT -> { dx = 1; dy = 0; }
+                        case KeyEvent.VK_UP -> { dx = 0; dy = -1; }
+                        case KeyEvent.VK_DOWN -> { dx = 0; dy = 1; }
+                    }
                 }
-
             }
         });
 
@@ -267,7 +264,7 @@ class GamePanel extends JPanel implements ActionListener {
             );
 
             // draw UI on top
-            DrawComponents.drawScore(g, player.getScore());
+            DrawComponents.drawScore(g, score);
             g.setColor(Color.WHITE);
             g.drawString("Lives: " + lives, 20, 30);
             return;  // nothing else should overpaint it
@@ -275,13 +272,13 @@ class GamePanel extends JPanel implements ActionListener {
 
         // 4) normal Pac‑Man
         DrawComponents.drawPacman(g, ratSprite, this,
-                player.getFrame(), 4,
-                TILE_SIZE, player.getX(), player.getY(),
-                player.isPoweredUp(), player.isMouthOpen());
-
+                frame, frameCount,
+                TILE_SIZE, pacmanX, pacmanY,
+                poweredUp, mouthOpen
+        );
 
         // 5) UI, level, messages
-        DrawComponents.drawScore(g, player.getScore());
+        DrawComponents.drawScore(g, score);
         g.setColor(Color.WHITE);
         g.drawString("Lives: " + lives, 20, 30);
         DrawComponents.drawLevel(g, level);
@@ -439,15 +436,19 @@ class GamePanel extends JPanel implements ActionListener {
         }
 
         // Animate Pacman's mouth
-        player.updateAnimation();
-
+        mouthOpen = !mouthOpen;
+        frame = (frame + 1) % frameCount;
 
         // Animate cats
         catFrame = (catFrame + 1) % CAT_FRAME_COUNT;
 
         // Handle power-up timer
-        player.tickPowerUp();
-
+        if (poweredUp) {
+            powerTimer--;
+            if (powerTimer <= 0) {
+                poweredUp = false;
+            }
+        }
 
         // Throttle cat movement
         catMoveCounter++;
@@ -467,16 +468,100 @@ class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    // Move Pacman
-
     private void movePacman() {
-        player.move(
-                maze, dots, powerPellets,
-                catPositions, catScattering,
-                catScatterTimer, catRespawnDelay,
-                scatterDx, scatterDy,
-                gameManager
-        );
+        if (gameWon || gameOver) return;
+
+        if (pacmanX == 0) {
+            pacmanX = 18;
+        } else if (pacmanX == 19) {
+            pacmanX = 1;
+        }
+
+        // 1) store old Pac-Man pos
+        int prevPX = pacmanX, prevPY = pacmanY;
+        int newX, newY;
+
+        // 2) compute next cell
+        if (dx != 0 || dy != 0) {
+            newX = pacmanX + dx;
+            newY = pacmanY + dy;
+        } else {
+            newX = pacmanX + lastDXMove;
+            newY = pacmanY + lastDYMove;
+        }
+        // prevent RAtman from entering cage all direction
+        if ((newY >= 9 && newY <= 11 && newX >= 9 && newX <= 11) &&  //  Block entry into cage
+                !(newY == 9 && (newX == 8 || newX == 12)) &&  //  Allow movement along top wall
+                !(newY == 11 && (newX == 8 || newX == 12)) && //  Allow movement along bottom wall
+                !(newX == 8 && (newY == 9 || newY == 11)) &&  //  Allow movement along left wall
+                !(newX == 12 && (newY == 9 || newY == 11))) { // Block entry from the right
+            return;
+        }
+
+        // 3) only move if not a wall
+        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1) {
+            return;
+        }
+        pacmanX = newX;
+        pacmanY = newY;
+
+        // 4) eat dots
+        if (dots[pacmanY][pacmanX]) {
+            dots[pacmanY][pacmanX] = false;
+            score += 10;
+            long now = System.currentTimeMillis();
+            if (now - lastWakaTime >= 1000) {
+                SoundPlayer.playSound("sounds/waka.wav");
+                lastWakaTime = now;
+            }
+            if (checkWin()) {
+                gameWon = true;
+                timer.stop();
+                return;
+            }
+        }
+
+        // 5) eat power pellet
+        if (powerPellets[pacmanY][pacmanX]) {
+            powerPellets[pacmanY][pacmanX] = false;
+            poweredUp = true;
+            powerTimer = 40;
+            score += 50;
+            SoundPlayer.playSound("sounds/powerup.wav");
+        }
+
+        // 6) now handle any ghost collisions
+        for (int i = 0; i < catPositions.size(); i++) {
+            Point cat = catPositions.get(i);
+
+            if (cat.x == pacmanX && cat.y == pacmanY) {
+                if (poweredUp && !catScattering[i]) {
+                    // trigger scatter
+                    catScattering[i] = true;
+                    catScatterTimer[i] = SCATTER_DURATION;
+                    catRespawnDelay[i] = 0; // start delay counter from zero
+                    score += 100;
+                    SoundPlayer.playSound("sounds/eatghost.wav");
+                    scatterDx[i] = Integer.compare(10, cat.x);
+                    scatterDy[i] = Integer.compare(10, cat.y);
+
+                    // set target direction TOWARD cage center (10,10)
+                    int dxToCage = Integer.compare(10, cat.x);
+                    int dyToCage = Integer.compare(10, cat.y);
+                    scatterDx[i] = dxToCage;
+                    scatterDy[i] = dyToCage;
+                }
+                else if (!poweredUp && !catScattering[i] && !dying) {
+                    // start death animation instead of instantly resetting
+                    dying= true;
+                    deathTimer = DEATH_DURATION;
+                    // play the death sound
+                    SoundPlayer.playSound("sounds/death.wav");
+                    return;
+
+                }
+            }
+        }
     }
 
     private void resetPositions() {
@@ -637,10 +722,10 @@ class GamePanel extends JPanel implements ActionListener {
         score = 0;
         gameWon = false;
         gameOver = false;
-//        mouthOpen = true;
+        mouthOpen = true;
         poweredUp = false;
         usingPreviousMap = false;
-//        powerTimer = 0;
+        powerTimer = 0;
         frame = 0;
         catFrame = 0;
         catMoveCounter = 0;
