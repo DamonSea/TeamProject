@@ -516,53 +516,37 @@ class GamePanel extends JPanel implements ActionListener {
     private void movePacman() {
         if (gameWon || gameOver) return;
 
-        if (pacmanX == 0)
-        {
+        if (pacmanX == 0) {
             pacmanX = 18;
-        }
-        else if (pacmanX == 19)
-        {
+        } else if (pacmanX == 19) {
             pacmanX = 1;
         }
 
         // 1) store old Pac-Man pos
         int prevPX = pacmanX, prevPY = pacmanY;
-        int newX = 0;
-        int newY = 0;
+        int newX, newY;
 
         // 2) compute next cell
-        if (dx != 0 || dy != 0)
-        {
+        if (dx != 0 || dy != 0) {
             newX = pacmanX + dx;
             newY = pacmanY + dy;
-
-            if (!(newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1))
-            {
-                lastDXMove = dx;
-                lastDYMove = dy;
-                dx=0;
-                dy=0;
-            }
-            else
-            {
-                newX = newX - dx + lastDXMove;
-                newY = newY - dy + lastDYMove;
-            }
-
-        }
-        else
-        {
+        } else {
             newX = pacmanX + lastDXMove;
             newY = pacmanY + lastDYMove;
         }
-
-
-        // 3) only move if not a wall
-        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1)
-        {
-            return;
+        // prevent RAtman from entering cage all direction
+        if ((newY >= 9 && newY <= 11 && newX >= 9 && newX <= 11) &&  //  Block entry into cage
+                !(newY == 9 && (newX == 8 || newX == 12)) &&  //  Allow movement along top wall
+                !(newY == 11 && (newX == 8 || newX == 12)) && //  Allow movement along bottom wall
+                !(newX == 8 && (newY == 9 || newY == 11)) &&  //  Allow movement along left wall
+                !(newX == 12 && (newY == 9 || newY == 11))) { // Block entry from the right
+             return;
         }
 
+        // 3) only move if not a wall
+        if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS || maze[newY][newX] == 1) {
+            return;
+        }
         pacmanX = newX;
         pacmanY = newY;
 
@@ -810,14 +794,10 @@ class GamePanel extends JPanel implements ActionListener {
             }
         }
 
-        // Open ONLY the ghost exit (RatMan cannot enter)
-        maze[9][10] = 0;  // Allow ghosts to exit upward after revive
-
-//  Open the cage center AND one entrance (e.g., from below)
+        //  Open the cage center AND one entrance (e.g., from below)
         maze[10][10] = 0; // center
         maze[11][10] = 0; // entrance from bottom
         maze[9][10] = 0; // allow ghost to exit upward after revive
-
 
         // Reset cat positions
         catPositions.clear(); // add to clear previous level cat positions
