@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -186,20 +187,25 @@ class GamePanel extends JPanel implements ActionListener {
                         repaint();
 
                         // Delay leaderboard window so it opens after repaint
-                        SwingUtilities.invokeLater(() -> {
-                            new LeaderboardWindow().setVisible(true);
-                        });
+                        //SwingUtilities.invokeLater(() -> {
+                        //    new LeaderboardWindow().setVisible(true);
+                        //});
 
                         // No immediate reset here; the user will view the leaderboard first
                         return;
                     }
 
-                    if (key == KeyEvent.VK_BACK_SPACE && playerInitials.length() > 0) {
+                    if (key == KeyEvent.VK_BACK_SPACE && !playerInitials.isEmpty()) {
                         playerInitials = playerInitials.substring(0, playerInitials.length() - 1);
                     }
                     // Allow adding characters to initials if it's less than 3 characters
                     else if (playerInitials.length() < 3 && Character.isLetterOrDigit(e.getKeyChar())) {
                         playerInitials += e.getKeyChar();
+                    }
+                } else if (gameOver && !enteringName) {
+                    if (key == KeyEvent.VK_ENTER) {
+                        // Restart game when ENTER is pressed after leaderboard is shown
+                        resetGame();
                     }
                 }
 
@@ -318,17 +324,49 @@ class GamePanel extends JPanel implements ActionListener {
             DrawComponents.drawWinMessage(g);
             DrawComponents.drawAdvanceLevelMessage(g);
         } else if (gameOver) {
+            // Clear the screen for a clean transition
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, getWidth(), getHeight());
+
             DrawComponents.drawGameOverMessage(g);
             DrawComponents.drawRestartMessage(g);
+
+            // Immortalize player Initial
             if (enteringName) {
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.BOLD, 20));
                 g.drawString("Enter Your Initials:", getWidth() / 2 - 100, getHeight() / 2 + 40);
                 g.drawString(playerInitials, getWidth() / 2 - 20, getHeight() / 2 + 70);
-                g.setFont(new Font("Arial", Font.PLAIN, 14));
+                g.setFont(new Font("Arial", Font.BOLD, 14));
                 g.drawString("(Press ENTER to submit)", getWidth() / 2 - 80, getHeight() / 2 + 95);
+                g.setFont(new Font("Arial", Font.BOLD, 14));
+                g.drawString("(Press Backspace to Delete)", getWidth() / 2 - 80, getHeight() / 2 + 115);
+            } else {
+            // Draw leaderboard
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 18));
+            //g.drawString("Leaderboard:", getWidth() / 2 - 60, getHeight() / 2 + 30); //center
+            g.drawString("Leaderboard:", 20, 70); // top left
+
+            //Retrieve Leaderboard score
+            List<String> scores = Leaderboard.getLeaderboard();
+            //int y = getHeight() / 2 + 50; // Center position for leaderboard entries
+                int y = 100; // Start position for leaderboard entries
+
+            for (String score : scores) {
+                if (score.startsWith("* ")) {
+                    g.setColor(Color.YELLOW); // Highlight new score in yellow
+                    score = score.replace("* ", "").replace(" *", ""); // Remove markers for display
+                } else {
+                    g.setColor(Color.WHITE);
+                }
+                //g.drawString(score, getWidth() / 2 - 60, y);//center
+                g.drawString(score, 20, y); // Move to top left under LeaderBoard
+                y += 25; // Move down for each entry
+            }
             }
         }
+
 
         if (waitingToStart) {
             g.setColor(Color.YELLOW);
