@@ -1,14 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.awt.Point;
-import java.util.Random;
 import java.io.IOException;
 import MazeGeneration.MazeGeneration;
 import net.java.games.input.Component;
@@ -26,7 +17,7 @@ public class PacManGame {
         // Set up the game window.
         frame = new JFrame("Rat-Man");
 
-        //Main Menu
+        // Main Menu
         menuPanel = new Menu();
         frame.add(menuPanel);
         frame.setSize(500, 500);
@@ -36,19 +27,28 @@ public class PacManGame {
         frame.setResizable(false);
     }
 
-    public static void showSkins() throws IOException {
-        frame.remove(menuPanel);
-        SkinsMenu skinsMenu = new SkinsMenu();
-        frame.add(skinsMenu);
+    public static void showMenu() throws IOException, FontFormatException {
+        menuPanel = new Menu();
+        frame.setContentPane(menuPanel);
+        frame.setSize(500, 500);
         frame.revalidate();
+        frame.repaint();
+    }
+
+    public static void showSkins() throws IOException {
+        SkinsMenu skinsMenu = new SkinsMenu();
+        frame.setContentPane(skinsMenu);
+        frame.revalidate();
+        frame.repaint();
     }
 
     public static void startGame() throws IOException {
-        frame.remove(menuPanel);
         GamePanel panel = new GamePanel();
-        frame.add(panel);
+        frame.setContentPane(panel);
         frame.setSize(610, 635);
         panel.requestFocusInWindow();
+        frame.revalidate();
+        frame.repaint();
     }
 
     // Method to show the leaderboard window
@@ -58,4 +58,3 @@ public class PacManGame {
         });
     }
 }
-

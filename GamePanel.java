@@ -132,7 +132,7 @@ class GamePanel extends JPanel implements ActionListener {
         SoundPlayer.playSound("sounds/intro.wav");
 
         // Load sprites
-        ratSprite = new ImageIcon("Images/Rat.png").getImage();
+        ratSprite = new ImageIcon(SkinSelector.getSkinPath()).getImage();
         catSpriteSheet = new ImageIcon("Images/cats.png").getImage();
         catScaredSpriteSheet = new ImageIcon("Images/cats_scared.png").getImage();
         catEyesSpriteSheet = new ImageIcon("Images/cat_eyes.png").getImage();
@@ -269,6 +269,12 @@ class GamePanel extends JPanel implements ActionListener {
             g.drawString("Lives: " + lives, 20, 30);
             return;  // nothing else should overpaint it
         }
+
+        int frameCount = switch (SkinSelector.selectedSkin) {
+            case "Joe_Oakes" -> 7;
+            case "Squirrel" -> 4;
+            default -> 4;
+        };
 
         // 4) normal Pac‑Man
         DrawComponents.drawPacman(g, ratSprite, this,
