@@ -356,37 +356,32 @@ class GamePanel extends JPanel implements ActionListener {
                 String componentName = event.getComponent().getName();
                 float value = event.getValue();
 
-                if (value == 1.0f) {
-                    if (componentName.equals("Button 6")) {
+                // Check if the game is over OR game is won, then check for reset button
+                if (gameOver || gameWon) {
+                    if (componentName.equals("Button 6") && value == 1.0f) {
                         resetGame();
+                        return;
                     }
                 }
 
-                if (componentName.equals("Hat Switch")) {
-                    if (value == 0.25f) { // Up
-                        dx = 0;
-                        dy = -1;
-                    } else if (value == 0.50f) { // Right
-                        dx = 1;
-                        dy = 0;
-                    } else if (value == 0.75f) { // Down
-                        dx = 0;
-                        dy = 1;
-                    } else if (value == 1.00f) { // Left
-                        dx = -1;
-                        dy = 0;
-                    } else if (value == 0.0f) {}
-                }
+                if (!gameOver && !gameWon && !dying && !waitingToStart && !enteringName) {
+                    if (componentName.equals("Hat Switch")) {
+                        if (value == 0.25f) { dx = 0; dy = -1; } // Up
+                        else if (value == 0.50f) { dx = 1; dy = 0; } // Right
+                        else if (value == 0.75f) { dx = 0; dy = 1; } // Down
+                        else if (value == 1.00f) { dx = -1; dy = 0; } // Left
+                    }
 
-                if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.X) {
-                    if (joyValue < -0.5f) { dx = -1; dy = 0; }  // move left
-                    else if (joyValue > 0.5f) { dx = 1; dy = 0; }  // move right
-                }
-                else if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.Y) {
-                    if (joyValue < -0.5f) { dx = 0; dy = -1; }  // move up
-                    else if (joyValue > 0.5f) { dx = 0; dy = 1; }  // move down
-                }
+                    if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.X) {
+                        if (joyValue < -0.5f) { dx = -1; dy = 0; }  // move left
+                        else if (joyValue > 0.5f) { dx = 1; dy = 0; }  // move right
+                    } else if (comp.getIdentifier() == net.java.games.input.Component.Identifier.Axis.Y) {
+                        if (joyValue < -0.5f) { dx = 0; dy = -1; }  // move up
+                        else if (joyValue > 0.5f) { dx = 0; dy = 1; }  // move down
+                    }
+                } else if (gameOver && enteringName) {
 
+                }
             }
         }
 
@@ -397,27 +392,24 @@ class GamePanel extends JPanel implements ActionListener {
 
                 if (lives <= 0) {
                     gameOver = true;
-                    enteringName = true; // prompt for initials input
-                    //Leaderboard.saveScore(playerInitials, score); // Save the player's score when the game is over
-                    timer.stop();
+                    enteringName = true;
                     repaint();
-
-                    //SwingUtilities.invokeLater(() -> {
-                    //    new LeaderboardWindow().setVisible(true); // Show the leaderboard after the game ends
-                    //});
-
-                    return;
+                } else {
+                    resetPositions(); // Reset positions for next life
+                    waitingToStart = true;
+                    readyTimer = 20;
                 }
-
-                resetPositions();
-                waitingToStart = true;
-                readyTimer = 20;
             }
-
             repaint();
             return;
         }
-        movePacman();
+
+        if (gameOver || gameWon) {
+            repaint();
+            return;
+        }
+
+
 
         if (waitingToStart) {
             readyTimer--;
@@ -425,15 +417,16 @@ class GamePanel extends JPanel implements ActionListener {
                 waitingToStart = false;
             }
             repaint();
-            return; // skip moving pacman/ghosts while waiting
+            return;
         }
 
         if (!gameOver && !gameWon && checkWin()) {
             gameWon = true;
-            timer.stop();
             repaint();
             return;
         }
+
+        movePacman();
 
         // Animate Pacman's mouth
         mouthOpen = !mouthOpen;
@@ -453,7 +446,7 @@ class GamePanel extends JPanel implements ActionListener {
         // Throttle cat movement
         catMoveCounter++;
         if (catMoveCounter >= CAT_MOVE_DELAY) {
-            moveGhost();
+            moveGhost(); // Has its own "if (gameWon || gameOver) return;"
             catMoveCounter = 0;
         }
 
