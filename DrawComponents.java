@@ -100,9 +100,14 @@ public class DrawComponents
         }
     }
 
-    public static void drawBoss(Graphics g, int x, int y)
+    public static void drawBoss(Graphics g, int x, int y, int frame)
     {
-
+        g.drawImage(GamePanel.bossSpriteSheet,
+                GamePanel.bossPosition.x * GamePanel.TILE_SIZE, GamePanel.bossPosition.y * GamePanel.TILE_SIZE,
+                GamePanel.bossPosition.x * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE, GamePanel.bossPosition.y * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE,
+                frame%2 * 100, 0,
+                (frame%2 + 1) * 100, 100,
+                null);
     }
 
 

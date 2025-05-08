@@ -16,8 +16,10 @@ import java.util.Random;
 
 class GamePanel extends JPanel implements ActionListener {
 
+    public final boolean DEBUG = false;
+
     // Game constants
-    public final int TILE_SIZE = 30;
+    public static final int TILE_SIZE = 30;
     public static final int ROWS = 20;
     public static final int COLS = 20;
     public static Timer timer;
@@ -55,6 +57,7 @@ class GamePanel extends JPanel implements ActionListener {
     // Animation variables
     public Image ratSprite;
     public Image catSpriteSheet;
+    public static Image bossSpriteSheet;
     public Image catScaredSpriteSheet;
     public Image catEyesSpriteSheet;
     public Image cageSpriteSheet;
@@ -70,7 +73,7 @@ class GamePanel extends JPanel implements ActionListener {
     public static final int RESPAWN_DELAY_TICKS = 10; // 1 second = 10 ticks
     public int catMoveCounter = 0;
     public final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
-    public Point bossPosition = new Point(18,18);
+    public static Point bossPosition = new Point(10,10);
     
 
     // per-ghost scatter state
@@ -137,6 +140,7 @@ class GamePanel extends JPanel implements ActionListener {
         // Load sprites
         ratSprite = new ImageIcon(SkinSelector.getSkinPath()).getImage();
         catSpriteSheet = new ImageIcon("Images/cats.png").getImage();
+        bossSpriteSheet = new ImageIcon("Images/boss.png").getImage();
         catScaredSpriteSheet = new ImageIcon("Images/cats_scared.png").getImage();
         catEyesSpriteSheet = new ImageIcon("Images/cat_eyes.png").getImage();
         deathSprite = new ImageIcon("Images/rat_death.png").getImage();
@@ -149,6 +153,12 @@ class GamePanel extends JPanel implements ActionListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
+
+                if (DEBUG && key == KeyEvent.VK_0)
+                {
+                    gameWon = true;
+                    resetGame();
+                }
 
                 //Advance to next level if won and reset game if over press R
                 if ((gameWon || gameOver) && key == KeyEvent.VK_R) {
@@ -246,16 +256,16 @@ class GamePanel extends JPanel implements ActionListener {
         );
 
         // 2) draw all ghosts
-        if (level < 4) // Not boss level
+        if (level%4 != 0) // Not boss level
         {
-            for (int i = 0; i < catPositions.size(); i++) {
+            for (int i = 0; i < level%4; i++) {
                 Point p = catPositions.get(i);
                 drawCat(g, i, catFrame, p.x, p.y);
             }
         }
         else
         {
-            DrawComponents.drawBoss(g, bossPosition.x,bossPosition.y);
+            DrawComponents.drawBoss(g, bossPosition.x,bossPosition.y, frame);
         }
 
         // 3) death animation overlay
@@ -361,7 +371,6 @@ class GamePanel extends JPanel implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-
         if (xboxController != null) {
             xboxController.poll();
             net.java.games.input.EventQueue queue = xboxController.getEventQueue();
@@ -460,7 +469,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
 
         // Throttle cat movement
-        if (level < 4) {
+        if (level%4 != 0) {
             catMoveCounter++;
             if (catMoveCounter >= CAT_MOVE_DELAY) {
                 moveGhost(); // Has its own "if (gameWon || gameOver) return;"
@@ -469,7 +478,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
         else
         {
-            //moveBoss();
+            Movement.moveBoss();
         }
 
         // Cage door animation timer
@@ -608,6 +617,8 @@ class GamePanel extends JPanel implements ActionListener {
         catPositions.add(new Point(10, 10));
         catPositions.add(new Point(11, 10));
 
+        bossPosition = new Point(10,10);
+
         catReleaseTimers = new int[]{0, 20, 40};
 
         int n = catPositions.size();
@@ -624,9 +635,13 @@ class GamePanel extends JPanel implements ActionListener {
 
     public void moveGhost() {
         if (gameWon || gameOver) return;
-        if (level < 4)
+        if (level % 4 != 0)
         {
             Movement.moveCats();
+        }
+        else
+        {
+            Movement.moveBoss();
         }
 
     }
@@ -643,7 +658,7 @@ class GamePanel extends JPanel implements ActionListener {
         return true;
     }
 
-    public int level = 1; // start from level one
+    public static int level = 1; // start from level one
 
     public void resetGame() {
         if (gameWon) {
@@ -665,7 +680,17 @@ class GamePanel extends JPanel implements ActionListener {
         frame = 0;
         catFrame = 0;
         catMoveCounter = 0;
-        lives = 3;
+        lastDXMove = 0;
+        lastDYMove = 0;
+        bossPosition = new Point(10,10);
+        if (DEBUG)
+        {
+            lives = 999;
+        }
+        else
+        {
+            lives = 3;
+        }
         enteringName = false;
         playerInitials = "";
         leaderboardShown = false;

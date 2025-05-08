@@ -4,7 +4,7 @@ public class Movement {
 
     public static void moveCats()
     {
-        for (int i = 0; i < GamePanel.catPositions.size(); i++) {
+        for (int i = 0; i < GamePanel.level%4; i++) {
             boolean[] catScattering;
             if (i >= GamePanel.catScattering.length || i >= GamePanel.catRespawnDelay.length || i >= GamePanel.catReleaseTimers.length) continue;  // Prevent out-of-bounds error
 
@@ -108,5 +108,43 @@ public class Movement {
                 GamePanel.catPositions.set(i, new Point(nextX, nextY));
             }
         }
+    }
+
+    public static void moveBoss() {
+        // Normal chase logic
+        Point cat = GamePanel.bossPosition;
+        int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
+        int[] dxs = {-1, 1, 0, 0}, dys = {0, 0, -1, 1};
+
+        int pacmanY;
+        for (int j = 0; j < 4; j++) {
+            int tx = cat.x + dxs[j];
+            int ty = cat.y + dys[j];
+
+            if (tx < 0 || tx >= GamePanel.COLS || ty < 0 || ty >= GamePanel.ROWS) continue;
+            if (GamePanel.maze[ty][tx] == 1) continue;
+
+            int dist = Math.abs(tx - GamePanel.pacmanX) + Math.abs(ty - GamePanel.pacmanY);
+            if (dist < minDist) {
+                minDist = dist;
+                bestDx = dxs[j];
+                bestDy = dys[j];
+            }
+        }
+
+        int nextX = cat.x + bestDx;
+        int nextY = cat.y + bestDy;
+
+        if (nextX == GamePanel.pacmanX && nextY == GamePanel.pacmanY) {
+            GamePanel.lives--;
+            if (GamePanel.lives > 0) GamePanel.resetPositions();
+            else {
+                GamePanel.gameOver = true;
+                GamePanel.timer.stop();
+            }
+            return;
+
+        }
+        GamePanel.bossPosition = new Point(nextX, nextY);
     }
 }
