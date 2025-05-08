@@ -99,11 +99,10 @@ public class MazeGeneration
         maze[9][19] = 0;
         maze[10][19] = 0;
 
-        for (int i = 6; i < 9; i++)
+        for (int i = 1; i < 9; i++)
         {
             maze[10][i] = 0;
             maze[i][10] = 0;
-            powerPellets[i][10] = false;
         }
     }
 
