@@ -224,10 +224,7 @@ class GamePanel extends JPanel implements ActionListener {
                     g.fillOval(col * TILE_SIZE + TILE_SIZE / 3, row * TILE_SIZE + TILE_SIZE / 3, TILE_SIZE / 3, TILE_SIZE / 3);
                 }
 
-                if (powerPellets[row][col]) {
-                    g.setColor(Color.YELLOW);
-                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 4, row * TILE_SIZE + TILE_SIZE / 4, TILE_SIZE / 2, TILE_SIZE / 2);
-                }
+                DrawComponents.drawPowerPellets(g, powerPellets, TILE_SIZE, ROWS, COLS);
             }
         }
 

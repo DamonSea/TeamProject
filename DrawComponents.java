@@ -9,10 +9,12 @@ public class DrawComponents
 {
     static double[][] previousMap = new double[30][30];
     static BufferedImage mazeBlockSheet;
+    static Image cheesePelletImage;
     static String theme = "outdoor";
 
     public static void loadSprites() throws IOException {
         mazeBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Outdoor.png"));
+        cheesePelletImage = ImageIO.read(new File("Images/pelletcheese.png"));
     }
 
     public static void drawMaze(Graphics g, int[][] maze, int TILE_SIZE, int ROWS, int COLS, boolean usingPreviousMap) throws IOException {
@@ -74,7 +76,14 @@ public class DrawComponents
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 if (powerPellets[row][col]) {
-                    g.fillOval(col * TILE_SIZE + TILE_SIZE / 2 - 6, row * TILE_SIZE + TILE_SIZE / 2 - 6, 12, 12);
+                    int size = (int)(TILE_SIZE * 0.8);
+                    int offset = (TILE_SIZE - size) / 2;
+
+                    g.drawImage(cheesePelletImage,
+                            col * TILE_SIZE + offset,
+                            row * TILE_SIZE + offset,
+                            size, size,
+                            null);
                 }
             }
         }
