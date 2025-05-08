@@ -15,7 +15,6 @@ public class DrawComponents
         mazeBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Outdoor.png"));
     }
 
-
     public static void drawMaze(Graphics g, int[][] maze, int TILE_SIZE, int ROWS, int COLS, boolean usingPreviousMap) throws IOException {
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
@@ -101,10 +100,11 @@ public class DrawComponents
         }
     }
 
-    public static void drawGhost(Graphics g, int ghostX, int ghostY, int TILE_SIZE) {
-        g.setColor(Color.RED);
-        g.fillOval(ghostX * TILE_SIZE, ghostY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    public static void drawBoss(Graphics g, int x, int y)
+    {
+
     }
+
 
     public static void drawScore(Graphics g, int score) {
         g.setColor(Color.WHITE);

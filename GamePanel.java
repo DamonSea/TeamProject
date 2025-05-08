@@ -17,82 +17,85 @@ import java.util.Random;
 class GamePanel extends JPanel implements ActionListener {
 
     // Game constants
-    private final int TILE_SIZE = 30;
-    private final int ROWS = 20;
-    private final int COLS = 20;
-    private Timer timer;
+    public final int TILE_SIZE = 30;
+    public static final int ROWS = 20;
+    public static final int COLS = 20;
+    public static Timer timer;
 
     // Pacman position and direction
-    private int pacmanX = 1;
-    private int pacmanY = 1;
-    private int dx = 0;
-    private int dy = 0;
-    private int lastDXMove;
-    private int lastDYMove;
+    public static int pacmanX = 1;
+    public static int pacmanY = 1;
+    public static int dx = 0;
+    public static int dy = 0;
+    public int lastDXMove;
+    public int lastDYMove;
 
-    private boolean mouthOpen = true;
+    public boolean mouthOpen = true;
 
     // Maze and collectibles
-    private int[][] maze = new int[ROWS][COLS];
-    private boolean[][] dots = new boolean[ROWS][COLS];
-    private boolean[][] powerPellets = new boolean[ROWS][COLS];
+    public static int[][] maze = new int[ROWS][COLS];
+    public boolean[][] dots = new boolean[ROWS][COLS];
+    public boolean[][] powerPellets = new boolean[ROWS][COLS];
 
     // Power-up state
-    private boolean poweredUp = false;
-    private int powerTimer = 0;
+    public static boolean poweredUp = false;
+    public int powerTimer = 0;
 
     // Score and game state
-    private int score = 0;
-    private boolean gameWon = false;
-    private boolean gameOver = false;
-    private boolean usingPreviousMap = false;
-    private long lastWakaTime = 0;
-    private final Random random = new Random();
-    private boolean enteringName = false; // Input variable
-    private String playerInitials = "";
-    private boolean leaderboardShown = false;
+    public static int score = 0;
+    public boolean gameWon = false;
+    public static boolean gameOver = false;
+    public boolean usingPreviousMap = false;
+    public long lastWakaTime = 0;
+    public final Random random = new Random();
+    public boolean enteringName = false; // Input variable
+    public String playerInitials = "";
+    public boolean leaderboardShown = false;
 
     // Animation variables
-    private Image ratSprite;
-    private Image catSpriteSheet;
-    private Image catScaredSpriteSheet;
-    private Image catEyesSpriteSheet;
-    private Image cageSpriteSheet;
-    private int frame = 0;
-    private final int frameCount = 4; // Number of frames for rat animation
-    private int catFrame = 0;
-    private final int CAT_FRAME_COUNT = 2; // Two frames per cat
+    public Image ratSprite;
+    public Image catSpriteSheet;
+    public Image catScaredSpriteSheet;
+    public Image catEyesSpriteSheet;
+    public Image cageSpriteSheet;
+    public int frame = 0;
+    public final int frameCount = 4; // Number of frames for rat animation
+    public int catFrame = 0;
+    public final int CAT_FRAME_COUNT = 2; // Two frames per cat
 
     // Cat movement and animation
-    private java.util.List<Point> catPositions = new ArrayList<>();
-    private int[] catReleaseTimers = {0, 20, 40};
-    private int[] catRespawnDelay;
-    private static final int RESPAWN_DELAY_TICKS = 10; // 1 second = 10 ticks
-    private int catMoveCounter = 0;
-    private final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
+    public static java.util.List<Point> catPositions = new ArrayList<>();
+    public static int[] catReleaseTimers = {0, 20, 40};
+    public static int[] catRespawnDelay;
+    public static final int RESPAWN_DELAY_TICKS = 10; // 1 second = 10 ticks
+    public int catMoveCounter = 0;
+    public final int CAT_MOVE_DELAY = 5; // Move every 5 ticks
+    public Point bossPosition = new Point(18,18);
+    
 
     // per-ghost scatter state
-    private boolean[] catScattering;
-    private int[] catScatterTimer;
-    private int[] scatterDx, scatterDy;
-    private final int SCATTER_DURATION = 10;
+    public static boolean[] catScattering;
+    public static int[] catScatterTimer;
+    public static int[] scatterDx;
+    public static int[] scatterDy;
+    public final int SCATTER_DURATION = 10;
 
-    private boolean cageDoorOpen = false;
-    private int cageDoorTimer = 0;
-    private static final int CAGE_DOOR_OPEN_TIME = 10; // ticks (adjust if needed)
+    public boolean cageDoorOpen = false;
+    public int cageDoorTimer = 0;
+    public static final int CAGE_DOOR_OPEN_TIME = 10; // ticks (adjust if needed)
 
     // Lives
-    private int lives = 3;
+    public static int lives = 3;
     // timer delay
-    private boolean waitingToStart = false;
-    private int readyTimer = 0;
+    public static boolean waitingToStart = false;
+    public static int readyTimer = 0;
     Controller xboxController = null;
 
-    private boolean dying = false;
-    private int deathTimer = 0;
-    private static final int DEATH_DURATION = 20;
-    private Image deathSprite;
-    private static final int DEATH_FRAMES   = 6;
+    public boolean dying = false;
+    public int deathTimer = 0;
+    public static final int DEATH_DURATION = 20;
+    public Image deathSprite;
+    public static final int DEATH_FRAMES   = 6;
 
 
     //constuctor
@@ -243,9 +246,16 @@ class GamePanel extends JPanel implements ActionListener {
         );
 
         // 2) draw all ghosts
-        for (int i = 0; i < catPositions.size(); i++) {
-            Point p = catPositions.get(i);
-            drawCat(g, i, catFrame, p.x, p.y);
+        if (level < 4) // Not boss level
+        {
+            for (int i = 0; i < catPositions.size(); i++) {
+                Point p = catPositions.get(i);
+                drawCat(g, i, catFrame, p.x, p.y);
+            }
+        }
+        else
+        {
+            DrawComponents.drawBoss(g, bossPosition.x,bossPosition.y);
         }
 
         // 3) death animation overlay
@@ -306,7 +316,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    private void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
+    public void drawCat(Graphics g, int catIndex, int frame, int x, int y) {
         Image sprite;
         int frameWidth;
         int frameHeight;
@@ -444,10 +454,16 @@ class GamePanel extends JPanel implements ActionListener {
         }
 
         // Throttle cat movement
-        catMoveCounter++;
-        if (catMoveCounter >= CAT_MOVE_DELAY) {
-            moveGhost(); // Has its own "if (gameWon || gameOver) return;"
-            catMoveCounter = 0;
+        if (level < 4) {
+            catMoveCounter++;
+            if (catMoveCounter >= CAT_MOVE_DELAY) {
+                moveGhost(); // Has its own "if (gameWon || gameOver) return;"
+                catMoveCounter = 0;
+            }
+        }
+        else
+        {
+            //moveBoss();
         }
 
         // Cage door animation timer
@@ -461,7 +477,7 @@ class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    private void movePacman() {
+    public void movePacman() {
         if (gameWon || gameOver) return;
 
         if (pacmanX == 0)
@@ -575,7 +591,7 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    private void resetPositions() {
+    public static void resetPositions() {
         pacmanX = 1;
         pacmanY = 1;
         dx = 0;
@@ -600,114 +616,17 @@ class GamePanel extends JPanel implements ActionListener {
 
     }
 
-    private void moveGhost() {
+    public void moveGhost() {
         if (gameWon || gameOver) return;
-
-        for (int i = 0; i < catPositions.size(); i++) {
-            if (i >= catScattering.length || i >= catRespawnDelay.length || i >= catReleaseTimers.length) continue;  // Prevent out-of-bounds error
-
-            // cat scatter moves back to cage
-            if (catScattering[i]) {
-                Point cat = catPositions.get(i);
-                int targetX = 10, targetY = 10; // position of cage
-
-                // If eyes have reached the cage
-                if (cat.x == targetX && cat.y == targetY) {
-                    if (catRespawnDelay[i] < RESPAWN_DELAY_TICKS) {
-                        catRespawnDelay[i]++;
-                    } else {
-                        catScattering[i] = false;
-                        catRespawnDelay[i] = 0;
-                        catReleaseTimers[i] = 10;
-                        //catPositions.set(i, new Point(9, 10)); // just outside cage
-                        // add cat position to move cats eye
-                        if (i % 3 == 0) {
-                            catPositions.set(i, new Point(9, 10)); // Left side of cage
-                        } else if (i % 3 == 1) {
-                            catPositions.set(i, new Point(10, 10)); // Center of cage
-                        } else {
-                            catPositions.set(i, new Point(11, 10)); // Right side of cage
-                        }
-                    }
-                    continue;
-                }
-
-                // Move eyes toward cage
-                int dx = Integer.compare(targetX, cat.x);
-                int dy = Integer.compare(targetY, cat.y);
-                int nx = cat.x + dx;
-                int ny = cat.y + dy;
-
-                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS &&
-                        (maze[ny][nx] == 0 || (nx >= 9 && nx <= 11 && ny >= 9 && ny <= 11))) {
-                    catPositions.set(i, new Point(nx, ny));
-                }
-
-                continue;
-            }
-
-            // Wait for release timer
-            if (catReleaseTimers[i] > 0) {
-                catReleaseTimers[i]--;
-                continue;
-            }
-
-            // Normal chase logic
-            Point cat = catPositions.get(i);
-            int bestDx = 0, bestDy = 0, minDist = Integer.MAX_VALUE;
-            int[] dxs = {-1, 1, 0, 0}, dys = {0, 0, -1, 1};
-
-            for (int j = 0; j < 4; j++) {
-                int tx = cat.x + dxs[j];
-                int ty = cat.y + dys[j];
-
-                if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) continue;
-                if (maze[ty][tx] == 1) continue;
-
-                int dist = Math.abs(tx - pacmanX) + Math.abs(ty - pacmanY);
-                if (dist < minDist) {
-                    minDist = dist;
-                    bestDx = dxs[j];
-                    bestDy = dys[j];
-                }
-            }
-
-            int nextX = cat.x + bestDx;
-            int nextY = cat.y + bestDy;
-
-            if (nextX == pacmanX && nextY == pacmanY) {
-                if (poweredUp) {
-                    catScattering[i] = true; //cat turns in to eyes
-                    catRespawnDelay[i] = 0;
-                    SoundPlayer.playSound("sounds/eatghost.wav");
-                    score += 100;
-                    continue;
-                } else {
-                    lives--;
-                    if (lives > 0) resetPositions();
-                    else {
-                        gameOver = true;
-                        timer.stop();
-                    }
-                    return;
-                }
-            }
-
-            boolean occupied = false;
-            for (int j = 0; j < catPositions.size(); j++) {
-                if (j != i && catPositions.get(j).equals(new Point(nextX, nextY))) {
-                    occupied = true;
-                    break;
-                }
-            }
-
-            if (!occupied) {
-                catPositions.set(i, new Point(nextX, nextY));
-            }
+        if (level < 4)
+        {
+            Movement.moveCats();
         }
-    }
 
-    private boolean checkWin() {
+    }
+    
+
+    public boolean checkWin() {
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 if (dots[row][col] || powerPellets[row][col]) {
@@ -718,9 +637,9 @@ class GamePanel extends JPanel implements ActionListener {
         return true;
     }
 
-    private int level = 1; // start from level one
+    public int level = 1; // start from level one
 
-    private void resetGame() {
+    public void resetGame() {
         if (gameWon) {
             level++; // Advance to next level
         } else {
