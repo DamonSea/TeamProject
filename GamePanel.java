@@ -33,7 +33,7 @@ class GamePanel extends JPanel implements ActionListener {
     public int lastDXMove;
     public int lastDYMove;
 
-    public boolean mouthOpen = true;
+    public boolean mouthOpen = false;
 
     // Maze and collectibles
     public static int[][] maze = new int[ROWS][COLS];
