@@ -126,6 +126,14 @@ class GamePanel extends JPanel implements ActionListener {
         {
             setBackground(new Color(150,110,0));
         }
+        else if (DrawComponents.theme.equals("classroom"))
+        {
+            setBackground(new Color(100,130,130));
+        }
+        else
+        {
+            setBackground(Color.BLACK);
+        }
         setFocusable(true);
 
         // Generate initial maze
@@ -692,7 +700,18 @@ class GamePanel extends JPanel implements ActionListener {
         playerInitials = "";
         leaderboardShown = false;
 
-
+        if (level%3 == 1)
+        {
+            DrawComponents.theme = "outdoor";
+        }
+        else if (level%3 == 2)
+        {
+            DrawComponents.theme = "classroom";
+        }
+        else
+        {
+            DrawComponents.theme = "planets";
+        }
         //generates a new maze map based on the level
         MazeGeneration.generateRandomMaze();
         maze = MazeGeneration.getMaze();

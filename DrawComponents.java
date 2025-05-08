@@ -9,11 +9,15 @@ public class DrawComponents
 {
     static double[][] previousMap = new double[30][30];
     static BufferedImage mazeBlockSheet;
+    static BufferedImage classroomBlockSheet;
+    static BufferedImage planetsBlockSheet;
     static Image cheesePelletImage;
     static String theme = "outdoor";
 
     public static void loadSprites() throws IOException {
         mazeBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Outdoor.png"));
+        classroomBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Classroom.png"));
+        planetsBlockSheet = ImageIO.read(new File("MazeGeneration/themes/Planets.png"));
         cheesePelletImage = ImageIO.read(new File("Images/pelletcheese.png"));
     }
 
@@ -53,6 +57,48 @@ public class DrawComponents
                         else
                         {
                             g.drawImage(mazeBlockSheet.getSubimage(TILE_SIZE*3, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                    }
+                    else if (theme.equals("classroom"))
+                    {
+                        double randomValue;
+                        if (usingPreviousMap)
+                        {
+                            randomValue = previousMap[col][row];
+                        }
+                        else
+                        {
+                            randomValue = Math.random();
+                            previousMap[col][row] = randomValue;
+                        }
+                        if (randomValue <= 0.85)
+                        {
+                            g.drawImage(classroomBlockSheet.getSubimage(0, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                        else
+                        {
+                            g.drawImage(classroomBlockSheet.getSubimage(TILE_SIZE, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                    }
+                    else if (theme.equals("planets"))
+                    {
+                        double randomValue;
+                        if (usingPreviousMap)
+                        {
+                            randomValue = previousMap[col][row];
+                        }
+                        else
+                        {
+                            randomValue = Math.random();
+                            previousMap[col][row] = randomValue;
+                        }
+                        if (randomValue <= 0.85)
+                        {
+                            g.drawImage(planetsBlockSheet.getSubimage(0, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
+                        }
+                        else
+                        {
+                            g.drawImage(planetsBlockSheet.getSubimage(TILE_SIZE, 0, TILE_SIZE, TILE_SIZE), col * TILE_SIZE, row * TILE_SIZE, null);
                         }
                     }
                 }
