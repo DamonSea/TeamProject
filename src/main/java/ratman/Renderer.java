@@ -28,6 +28,21 @@ final class Renderer {
 
     private static final int DEATH_FRAMES = 6;
 
+    /**
+     * On-screen size of the visible artwork (sprite files have a lot of empty margin, so we crop
+     * to the drawing first). Bigger than the 30px tile, centred on it; collisions still use tiles.
+     */
+    private static final int PLAYER_SIZE = 42;
+    private static final int BOSS_WIDTH = 84;
+
+    /** Square area (relative to each frame) that contains a sheet's actual drawing. */
+    private record ArtBox(int x, int y, int size) {}
+    private final java.util.Map<BufferedImage, ArtBox> artBoxes = new java.util.IdentityHashMap<>();
+    private static final Color OUTLINE = new Color(20, 20, 20);
+
+    /** Black silhouettes of sprite sheets, used to draw an outline around the player. */
+    private final java.util.Map<BufferedImage, BufferedImage> silhouettes = new java.util.IdentityHashMap<>();
+
     private final GamePanel game;
 
     Renderer(GamePanel game) {
@@ -99,7 +114,11 @@ final class Renderer {
         int frame = game.animTick % 2;
         if (game.isBossLevel()) {
             int fw = boss.getHeight();
-            drawFrame(g, boss, frame, fw, game.bossX, game.bossY);
+            ArtBox box = artBox(boss, fw);
+            int cx = game.bossX * T + T / 2, cy = game.bossY * T + T / 2;
+            int sx = frame * fw + box.x();
+            g.drawImage(boss, cx - BOSS_WIDTH / 2, cy - BOSS_WIDTH / 2, cx + BOSS_WIDTH / 2, cy + BOSS_WIDTH / 2,
+                    sx, box.y(), sx + box.size(), box.y() + box.size(), null);
             return;
         }
         for (Cat cat : game.activeCats()) {
@@ -152,9 +171,55 @@ final class Renderer {
             case DOWN -> g.rotate(Math.PI / 2);
             default -> { }
         }
-        int sx = index * frameWidth;
-        g.drawImage(sheet, -T / 2, -T / 2, T / 2, T / 2, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+        int half = PLAYER_SIZE / 2;
+        ArtBox box = artBox(sheet, frameWidth);
+        int sx = index * frameWidth + box.x(), sy = box.y(), ex = sx + box.size(), ey = sy + box.size();
+
+        // Outline: the sprite's black silhouette nudged 2px in each direction, then the sprite on top
+        BufferedImage outline = silhouette(sheet);
+        int o = 2;
+        for (int[] d : new int[][]{{-o, 0}, {o, 0}, {0, -o}, {0, o}}) {
+            g.drawImage(outline, -half + d[0], -half + d[1], half + d[0], half + d[1], sx, sy, ex, ey, null);
+        }
+        g.drawImage(sheet, -half, -half, half, half, sx, sy, ex, ey, null);
         g.setTransform(saved);
+    }
+
+    /** Finds the smallest square (same for every frame) that holds the sheet's visible pixels. */
+    private ArtBox artBox(BufferedImage sheet, int frameWidth) {
+        return artBoxes.computeIfAbsent(sheet, src -> {
+            int frames = src.getWidth() / frameWidth, h = src.getHeight();
+            int minX = frameWidth, minY = h, maxX = -1, maxY = -1;
+            for (int f = 0; f < frames; f++) {
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < frameWidth; x++) {
+                        if ((src.getRGB(f * frameWidth + x, y) >>> 24) == 0) continue;
+                        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                    }
+                }
+            }
+            if (maxX < 0) return new ArtBox(0, 0, Math.min(frameWidth, h));
+            int size = Math.max(maxX - minX + 1, maxY - minY + 1);
+            // centre the square on the drawing, kept inside the frame
+            int x = Math.max(0, Math.min(frameWidth - size, (minX + maxX + 1 - size) / 2));
+            int y = Math.max(0, Math.min(h - size, (minY + maxY + 1 - size) / 2));
+            return new ArtBox(x, y, Math.min(size, Math.min(frameWidth, h)));
+        });
+    }
+
+    private BufferedImage silhouette(BufferedImage sheet) {
+        return silhouettes.computeIfAbsent(sheet, src -> {
+            BufferedImage out = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            int rgb = OUTLINE.getRGB() & 0xFFFFFF;
+            for (int y = 0; y < src.getHeight(); y++) {
+                for (int x = 0; x < src.getWidth(); x++) {
+                    int alpha = src.getRGB(x, y) >>> 24;
+                    if (alpha > 0) out.setRGB(x, y, (alpha << 24) | rgb);
+                }
+            }
+            return out;
+        });
     }
 
     // ---- HUD & overlays ----

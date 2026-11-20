@@ -20,6 +20,13 @@ final class ControllerInput {
 
     private static final float STICK_DEADZONE = 0.5f;
 
+    /**
+     * JInput logs a long red stack trace when it can't load its native library (e.g. on Apple
+     * Silicon Macs). That's harmless, we already fall back to keyboard, so keep the console quiet.
+     * Held in a field so the logger isn't garbage-collected and its level reset.
+     */
+    private static final java.util.logging.Logger JINPUT_LOG = java.util.logging.Logger.getLogger("net.java.games.input");
+
     private final Controller pad;
 
     private ControllerInput(Controller pad) {
@@ -27,6 +34,7 @@ final class ControllerInput {
     }
 
     static ControllerInput detect() {
+        JINPUT_LOG.setLevel(java.util.logging.Level.OFF);
         try {
             for (Controller c : ControllerEnvironment.getDefaultEnvironment().getControllers()) {
                 if (c.getType() == Controller.Type.GAMEPAD) {
