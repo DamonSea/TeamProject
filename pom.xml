@@ -4,20 +4,89 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
-    <artifactId>untitled</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <groupId>io.github.damonsea</groupId>
+    <artifactId>rat-man</artifactId>
+    <version>1.1.0</version>
+    <name>Rat-Man</name>
 
     <properties>
-        <maven.compiler.source>20</maven.compiler.source>
-        <maven.compiler.target>20</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jinput.version>2.0.10</jinput.version>
+        <main.class>ratman.RatMan</main.class>
+        <exec.mainClass>${main.class}</exec.mainClass>
+        <natives.dir>${project.build.directory}/natives</natives.dir>
     </properties>
+
     <dependencies>
+        <!-- Gamepad / Xbox controller support -->
         <dependency>
             <groupId>net.java.jinput</groupId>
             <artifactId>jinput</artifactId>
-            <version>2.0.10</version>
+            <version>${jinput.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Unpack JInput's native libraries (Windows/macOS/Linux) into target/natives
+                 instead of committing .dll files to the repo. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>unpack-jinput-natives</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>net.java.jinput</groupId>
+                                    <artifactId>jinput</artifactId>
+                                    <version>${jinput.version}</version>
+                                    <classifier>natives-all</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${natives.dir}</outputDirectory>
+                                    <excludes>META-INF/**</excludes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- mvn compile exec:java  → runs the game -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <systemProperties>
+                        <systemProperty>
+                            <key>net.java.games.input.librarypath</key>
+                            <value>${natives.dir}</value>
+                        </systemProperty>
+                    </systemProperties>
+                </configuration>
+            </plugin>
+
+            <!-- mvn package → target/rat-man-1.1.0.jar with Main-Class set -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

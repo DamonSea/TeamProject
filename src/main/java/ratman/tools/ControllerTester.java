@@ -1,12 +1,16 @@
-package XboxController;//https://github.com/jinput/jinput/releases
-//You need the Jar file added to the project
+package ratman.tools;
+
+/*
+ * Debug tool: prints every button/stick event from the first gamepad found.
+ * Run with: mvn compile exec:java -Dexec.mainClass=ratman.tools.ControllerTester
+ */
 
 import net.java.games.input.Controller;
 import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
 
-public class XboxControllerReader {
+public class ControllerTester {
 
     public static void main(String[] args) {
         Controller xboxController = null;
