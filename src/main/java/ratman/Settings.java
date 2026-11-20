@@ -54,6 +54,15 @@ final class Settings {
         set("sfx", on);
     }
 
+    /** Controller vibration. */
+    static boolean rumbleOn() {
+        return Boolean.parseBoolean(PROPS.getProperty("rumble", "true"));
+    }
+
+    static void setRumbleOn(boolean on) {
+        set("rumble", on);
+    }
+
     private static void set(String key, boolean value) {
         PROPS.setProperty(key, Boolean.toString(value));
         try {

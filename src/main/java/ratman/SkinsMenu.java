@@ -13,13 +13,29 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /** 2x2 grid: three skins plus a Back button. The chosen skin gets a yellow border. */
-final class SkinsMenu extends JPanel {
+final class SkinsMenu extends JPanel implements Gamepad.Target {
     private static final int SIZE = 500;
     private static final int GAP = 16;
     private static final int CELL = (SIZE - 3 * GAP) / 2;
     private static final int ICON = 150;
 
     private final Map<Skin, UiStyle.RetroButton> buttons = new EnumMap<>(Skin.class);
+    private final PadMenu pad;
+
+    @Override
+    public void padDirection(int dx, int dy) {
+        pad.padDirection(dx, dy);
+    }
+
+    @Override
+    public void padConfirm() {
+        pad.padConfirm();
+    }
+
+    @Override
+    public void padBack() {
+        pad.padBack();
+    }
 
     SkinsMenu() {
         setPreferredSize(new Dimension(SIZE, SIZE));
@@ -48,6 +64,10 @@ final class SkinsMenu extends JPanel {
         back.setBounds(cellX(3), cellY(3), CELL, CELL);
         back.addActionListener(e -> RatMan.showMenu());
         add(back);
+
+        java.util.List<UiStyle.RetroButton> order = new java.util.ArrayList<>(buttons.values());
+        order.add(back);
+        pad = new PadMenu(2, RatMan::showMenu, order);
 
         updateSelection();
     }

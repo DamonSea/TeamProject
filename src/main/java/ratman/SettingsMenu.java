@@ -10,7 +10,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /** Settings screen: maze style and sound, each a button that flips between two values. */
-final class SettingsMenu extends JPanel {
+final class SettingsMenu extends JPanel implements Gamepad.Target {
     private static final int W = 500, H = 470;
 
     SettingsMenu() {
@@ -22,17 +22,41 @@ final class SettingsMenu extends JPanel {
         add(title);
 
         Font font = Assets.font("/fonts/RetroNakjoy-Regular.otf", 24f);
-        add(toggle("MAZES", "DESIGNED", "RANDOM", Settings::randomMazes, Settings::setRandomMazes, font, 135));
-        add(toggle("MUSIC", "ON", "OFF", () -> !Settings.musicOn(), off -> {
+        UiStyle.RetroButton mazes = toggle("MAZES", "DESIGNED", "RANDOM", Settings::randomMazes, Settings::setRandomMazes, font, 125);
+        UiStyle.RetroButton music = toggle("MUSIC", "ON", "OFF", () -> !Settings.musicOn(), off -> {
             Settings.setMusicOn(!off);
             SoundPlayer.musicSettingChanged(SoundPlayer.Track.MENU);
-        }, font, 205));
-        add(toggle("SOUND FX", "ON", "OFF", () -> !Settings.sfxOn(), off -> Settings.setSfxOn(!off), font, 275));
+        }, font, 190);
+        UiStyle.RetroButton sfx = toggle("SOUND FX", "ON", "OFF", () -> !Settings.sfxOn(), off -> Settings.setSfxOn(!off), font, 255);
+        UiStyle.RetroButton rumble = toggle("RUMBLE", "ON", "OFF", () -> !Settings.rumbleOn(), off -> {
+            Settings.setRumbleOn(!off);
+            if (!off) Gamepad.rumble(0.6f, 0.6f, 250); // a little buzz so you can feel it's on
+        }, font, 320);
+        for (UiStyle.RetroButton b : new UiStyle.RetroButton[]{mazes, music, sfx, rumble}) add(b);
 
         UiStyle.RetroButton back = UiStyle.RetroButton.cheese("BACK", Assets.font("/fonts/RetroNakjoy-Regular.otf", 30f));
-        back.setBounds(150, 370, 200, 66);
+        back.setBounds(150, 392, 200, 60);
         back.addActionListener(e -> RatMan.showMenu());
         add(back);
+
+        pad = new PadMenu(1, RatMan::showMenu, java.util.List.of(mazes, music, sfx, rumble, back));
+    }
+
+    private final PadMenu pad;
+
+    @Override
+    public void padDirection(int dx, int dy) {
+        pad.padDirection(0, dy);
+    }
+
+    @Override
+    public void padConfirm() {
+        pad.padConfirm();
+    }
+
+    @Override
+    public void padBack() {
+        pad.padBack();
     }
 
     /**
@@ -47,7 +71,7 @@ final class SettingsMenu extends JPanel {
         b.setFont(font);
         Runnable refresh = () -> b.setText(label + ":  " + (isSecond.getAsBoolean() ? second : first));
         refresh.run();
-        b.setBounds(70, y, 360, 58);
+        b.setBounds(70, y, 360, 56);
         b.addActionListener(e -> {
             setSecond.accept(!isSecond.getAsBoolean());
             refresh.run();

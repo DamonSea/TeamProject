@@ -79,6 +79,7 @@ final class UiStyle {
         private final Color hover;
         private final Color pressed;
         private boolean selected;
+        private boolean padFocus;
 
         RetroButton(String text, Icon icon, Color base, Color hover, Color pressed, Color textColor) {
             super(text, icon);
@@ -101,6 +102,16 @@ final class UiStyle {
             return b;
         }
 
+        /** White ring showing which button the controller is on. */
+        void setPadFocus(boolean focused) {
+            this.padFocus = focused;
+            repaint();
+        }
+
+        boolean hasPadFocus() {
+            return padFocus;
+        }
+
         /** Yellow highlight border (used for the chosen skin). */
         void setChosen(boolean chosen) {
             this.selected = chosen;
@@ -111,7 +122,7 @@ final class UiStyle {
         protected void paintComponent(Graphics g0) {
             Graphics2D g = (Graphics2D) g0.create();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            Color fill = getModel().isPressed() ? pressed : getModel().isRollover() ? hover : base;
+            Color fill = getModel().isPressed() ? pressed : (getModel().isRollover() || padFocus) ? hover : base;
             int w = getWidth(), h = getHeight(), arc = 18;
             g.setColor(new Color(0, 0, 0, 90));
             g.fillRoundRect(3, 5, w - 4, h - 5, arc, arc);          // shadow
@@ -121,6 +132,11 @@ final class UiStyle {
             g.setColor(selected ? CHEESE : DARK);
             int inset = selected ? 3 : 1;
             g.drawRoundRect(inset, inset, w - 4 - 2 * inset, h - 5 - 2 * inset, arc, arc);
+            if (padFocus) {
+                g.setStroke(new BasicStroke(4));
+                g.setColor(Color.WHITE);
+                g.drawRoundRect(-1 + 3, 3, w - 10, h - 11, arc, arc);
+            }
             g.dispose();
             super.paintComponent(g0); // text and icon
         }

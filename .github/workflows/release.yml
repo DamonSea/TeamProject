@@ -57,10 +57,9 @@ jobs:
       - name: Gather the app files
         shell: bash
         run: |
-          mkdir -p staging/natives
+          mkdir -p staging
           cp target/rat-man.jar staging/
           cp target/lib/*.jar staging/
-          cp target/natives/* staging/natives/ || true
           ls -R staging
 
       - name: Package for macOS (.dmg)
@@ -76,9 +75,8 @@ jobs:
             --main-class ratman.RatMan \
             --icon packaging/ratman.icns \
             --mac-package-identifier io.github.damonsea.ratman \
-            --add-modules java.desktop,java.logging \
+            --add-modules java.desktop,java.logging,jdk.unsupported \
             --jlink-options "--strip-debug --no-man-pages --no-header-files --compress=zip-6" \
-            --java-options '-Dnet.java.games.input.librarypath=$APPDIR/natives' \
             --dest dist
           mv dist/*.dmg "dist/Rat-Man-$APP_VERSION-mac.dmg"
 
@@ -95,9 +93,8 @@ jobs:
             --main-jar rat-man.jar \
             --main-class ratman.RatMan \
             --icon packaging/ratman.ico \
-            --add-modules java.desktop,java.logging \
+            --add-modules java.desktop,java.logging,jdk.unsupported \
             --jlink-options "--strip-debug --no-man-pages --no-header-files --compress=zip-6" \
-            --java-options '-Dnet.java.games.input.librarypath=$APPDIR/natives' \
             --dest dist
           cd dist
           7z a "Rat-Man-$APP_VERSION-windows.zip" Rat-Man

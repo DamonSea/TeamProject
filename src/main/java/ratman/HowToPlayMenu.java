@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Two-page guide: the basics, then an introduction to each cat. */
-final class HowToPlayMenu extends JPanel {
+final class HowToPlayMenu extends JPanel implements Gamepad.Target {
     private static final int W = 560, H = 620;
     private static final int MARGIN = 28;
     private static final int ICON = 44;
@@ -54,6 +54,28 @@ final class HowToPlayMenu extends JPanel {
         add(menu);
         add(next);
         showPage(0);
+    }
+
+    // Controller: left/right flips pages, Cross goes to the next page (or back to the menu), Circle leaves
+    @Override
+    public void padDirection(int dx, int dy) {
+        if (dx != 0 && page + dx >= 0 && page + dx < pages.size()) {
+            SoundPlayer.play(SoundPlayer.Sound.CLICK);
+            showPage(page + dx);
+        }
+    }
+
+    @Override
+    public void padConfirm() {
+        SoundPlayer.play(SoundPlayer.Sound.CLICK);
+        if (page < pages.size() - 1) showPage(page + 1);
+        else RatMan.showMenu();
+    }
+
+    @Override
+    public void padBack() {
+        SoundPlayer.play(SoundPlayer.Sound.CLICK);
+        RatMan.showMenu();
     }
 
     private void showPage(int p) {

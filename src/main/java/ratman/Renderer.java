@@ -573,7 +573,9 @@ final class Renderer {
             String label = selected ? "> " + GamePanel.PAUSE_OPTIONS[i] + " <" : GamePanel.PAUSE_OPTIONS[i];
             centered(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, top + 115 + i * 40);
         }
-        centered(g, "Arrows + Enter  /  P to resume", SMALL, Color.LIGHT_GRAY, top + 240);
+        Gamepad pad = Gamepad.current();
+        centered(g, pad.isConnected() ? "D-pad + " + pad.confirmLabel() + "  /  " + pad.backLabel() + " to resume"
+                : "Arrows + Enter  /  P to resume", SMALL, Color.LIGHT_GRAY, top + 240);
     }
 
     private void drawLevelComplete(Graphics2D g) {
@@ -582,7 +584,8 @@ final class Renderer {
         centered(g, "Level Clear!", BIG, Color.GREEN, top + 50);
         String next = (game.level + 1) % 4 == 0 ? "Boss level next!" : "Score: " + game.score;
         centered(g, next, HUD, Color.WHITE, top + 85);
-        centered(g, "Press 'R' to Advance", HUD, Color.YELLOW, top + 120);
+        centered(g, "Press " + (Gamepad.current().isConnected() ? Gamepad.current().confirmLabel() : "'R'") + " to Advance",
+                HUD, Color.YELLOW, top + 120);
     }
 
     private void drawGameOver(Graphics2D g) {
@@ -593,8 +596,12 @@ final class Renderer {
             centered(g, "Game Over", BIG, Color.RED, CY - 50);
             centered(g, "Final score: " + game.score, HUD, Color.WHITE, CY - 15);
             centered(g, "Enter Your Initials:", HUD, Color.WHITE, CY + 40);
-            centered(g, (game.initials + "___").substring(0, 3), BIG, Color.YELLOW, CY + 90);
-            centered(g, "Enter = save   Backspace = delete   Esc = skip", SMALL, Color.LIGHT_GRAY, CY + 125);
+            centered(g, game.initialsDisplay(), BIG, Color.YELLOW, CY + 90);
+            Gamepad pad = Gamepad.current();
+            centered(g, pad.isConnected()
+                            ? "Up/Down = letter   " + pad.confirmLabel() + " = next   " + pad.backLabel() + " = back"
+                            : "Enter = save   Backspace = delete   Esc = skip",
+                    SMALL, Color.LIGHT_GRAY, CY + 125);
             return;
         }
 
@@ -602,7 +609,9 @@ final class Renderer {
         int rx = GamePanel.WIDTH * 2 / 3;
         centeredAt(g, "Game Over", BIG, Color.RED, rx, CY - 50);
         centeredAt(g, "Final score: " + game.score, HUD, Color.WHITE, rx, CY - 15);
-        centeredAt(g, "Press 'R' to Restart", HUD, Color.YELLOW, rx, CY + 20);
+        Gamepad pad = Gamepad.current();
+        centeredAt(g, "Press " + (pad.isConnected() ? pad.confirmLabel() : "'R'") + " to Restart", HUD, Color.YELLOW, rx, CY + 20);
+        if (pad.isConnected()) centeredAt(g, pad.backLabel() + " for the menu", SMALL, Color.LIGHT_GRAY, rx, CY + 44);
         drawLeaderboard(g);
     }
 
