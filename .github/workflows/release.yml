@@ -1,0 +1,123 @@
+# Builds Rat-Man as a desktop app for macOS and Windows (Java bundled inside, nothing else to install)
+# and publishes them on the GitHub Releases page.
+#
+# To publish a new version:  git tag v1.1.0 && git push origin v1.1.0
+# Only the parts of Java the game uses (desktop + logging) are bundled, which keeps the app ~60 MB.
+# You can also run it by hand from the Actions tab ("Run workflow") to just build the apps;
+# they then appear as downloadable artifacts on that run instead of as a release.
+name: Build apps
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest      # Apple Silicon
+            label: mac
+          - os: windows-latest
+            label: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build the game jar
+        run: mvn -B package
+
+      - name: Work out the version number
+        shell: bash
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          if [[ ! "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then V="1.0.0"; fi
+          echo "APP_VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Gather the app files
+        shell: bash
+        run: |
+          mkdir -p staging/natives
+          cp target/rat-man.jar staging/
+          cp target/lib/*.jar staging/
+          cp target/natives/* staging/natives/ || true
+          ls -R staging
+
+      - name: Package for macOS (.dmg)
+        if: runner.os == 'macOS'
+        run: |
+          jpackage --type dmg \
+            --name Rat-Man \
+            --app-version "$APP_VERSION" \
+            --vendor "Rat-Man Team" \
+            --description "Rat-Man: a Pac-Man-style maze game" \
+            --input staging \
+            --main-jar rat-man.jar \
+            --main-class ratman.RatMan \
+            --icon packaging/ratman.icns \
+            --mac-package-identifier io.github.damonsea.ratman \
+            --add-modules java.desktop,java.logging \
+            --jlink-options "--strip-debug --no-man-pages --no-header-files --compress=zip-6" \
+            --java-options '-Dnet.java.games.input.librarypath=$APPDIR/natives' \
+            --dest dist
+          mv dist/*.dmg "dist/Rat-Man-$APP_VERSION-mac.dmg"
+
+      - name: Package for Windows (.zip)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          jpackage --type app-image \
+            --name Rat-Man \
+            --app-version "$APP_VERSION" \
+            --vendor "Rat-Man Team" \
+            --description "Rat-Man: a Pac-Man-style maze game" \
+            --input staging \
+            --main-jar rat-man.jar \
+            --main-class ratman.RatMan \
+            --icon packaging/ratman.ico \
+            --add-modules java.desktop,java.logging \
+            --jlink-options "--strip-debug --no-man-pages --no-header-files --compress=zip-6" \
+            --java-options '-Dnet.java.games.input.librarypath=$APPDIR/natives' \
+            --dest dist
+          cd dist
+          7z a "Rat-Man-$APP_VERSION-windows.zip" Rat-Man
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rat-man-${{ matrix.label }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Rat-Man $GITHUB_REF_NAME" \
+            --notes-file packaging/RELEASE_NOTES.md
