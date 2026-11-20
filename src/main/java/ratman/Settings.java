@@ -33,12 +33,25 @@ final class Settings {
         set("randomMazes", on);
     }
 
-    static boolean soundOn() {
-        return Boolean.parseBoolean(PROPS.getProperty("sound", "true"));
+    /** Older versions had a single "sound" switch; it's the default for both new ones. */
+    private static String legacySound() {
+        return PROPS.getProperty("sound", "true");
     }
 
-    static void setSoundOn(boolean on) {
-        set("sound", on);
+    static boolean musicOn() {
+        return Boolean.parseBoolean(PROPS.getProperty("music", legacySound()));
+    }
+
+    static void setMusicOn(boolean on) {
+        set("music", on);
+    }
+
+    static boolean sfxOn() {
+        return Boolean.parseBoolean(PROPS.getProperty("sfx", legacySound()));
+    }
+
+    static void setSfxOn(boolean on) {
+        set("sfx", on);
     }
 
     private static void set(String key, boolean value) {
