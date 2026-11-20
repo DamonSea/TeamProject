@@ -140,7 +140,7 @@ final class Gamepad {
         else if (source.pressed(ControllerButton.DPAD_DOWN)) dy = 1;
         else {
             float sx = source.axis(ControllerAxis.LEFTX);
-            float sy = -source.axis(ControllerAxis.LEFTY); // Jamepad: up is positive; screen: up is negative
+            float sy = source.axis(ControllerAxis.LEFTY);  // pushing up gives a negative value, same as the screen
             if (Math.max(Math.abs(sx), Math.abs(sy)) > STICK_DEADZONE) {
                 if (Math.abs(sx) >= Math.abs(sy)) dx = sx > 0 ? 1 : -1;
                 else dy = sy > 0 ? 1 : -1;

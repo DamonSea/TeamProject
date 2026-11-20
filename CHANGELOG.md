@@ -6,6 +6,10 @@ What's new in each version of Rat-Man. Download the latest version from the
 <!-- Each version starts with a "## vX.Y.Z" heading. When a release is published, the
      section with that version's heading is copied to the top of its release page. -->
 
+## v1.2.1 — Stick fix (2026-11-20)
+
+- **Fixed:** pushing the left stick up moved you down (and down moved you up) in the game and the menus. The D-pad was never affected.
+
 ## v1.2.0 — Controller support (2026-11-20)
 
 ![Navigating the menus with a controller](https://raw.githubusercontent.com/DamonSea/Rat-Man/main/docs/media/controller-menus.gif)
