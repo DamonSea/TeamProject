@@ -40,6 +40,6 @@ then open it again.
 - Check **HOW TO PLAY** on the main menu for the rules and the cats' strategies.
 - **Settings** has toggles for music, sound effects, rumble, and random mazes.
 
-Every version's changes are listed in the [changelog](https://github.com/DamonSea/TeamProject/blob/main/CHANGELOG.md).
+Every version's changes are listed in the [changelog](https://github.com/DamonSea/Rat-Man/blob/main/CHANGELOG.md).
 
 High scores are saved on your own computer.

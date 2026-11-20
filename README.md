@@ -6,7 +6,7 @@ Grab the big cheese to power up and eat the cats. Every 4th level is a boss leve
 ## Play it (no Java needed)
 
 Download the Mac or Windows app from the
-[**Releases page**](https://github.com/DamonSea/TeamProject/releases/latest), and see what changed
+[**Releases page**](https://github.com/DamonSea/Rat-Man/releases/latest), and see what changed
 in each version in the [**changelog**](CHANGELOG.md). The first-launch
 steps for unsigned apps are listed there.
 
