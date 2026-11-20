@@ -18,7 +18,7 @@ import java.util.Random;
  * The game screen: holds all game state, runs the 100 ms game loop, and handles input.
  * Drawing lives in {@link Renderer}; cat movement lives in {@link CatAI}.
  */
-final class GamePanel extends JPanel implements ActionListener {
+final class GamePanel extends JPanel implements ActionListener, Gamepad.Target {
 
     /** Run with -Dratman.debug=true for 999 lives and the "0" key to clear a level. */
     static final boolean DEBUG = Boolean.getBoolean("ratman.debug");
@@ -48,7 +48,6 @@ final class GamePanel extends JPanel implements ActionListener {
     private final Timer timer = new Timer(FRAME_MS, this);
     private long lastTickNanos;
     long tickCount;
-    private final ControllerInput controller;
     private final Renderer renderer = new Renderer(this);
 
     // ---- world ----
@@ -128,11 +127,6 @@ final class GamePanel extends JPanel implements ActionListener {
     int displayedScore;            // rolls up toward score so points "count in"
 
     GamePanel() {
-        this(ControllerInput.detect());
-    }
-
-    GamePanel(ControllerInput controller) {
-        this.controller = controller;
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
@@ -296,19 +290,6 @@ final class GamePanel extends JPanel implements ActionListener {
 
     /** One 100 ms step of the game. */
     void tick() {
-        controller.poll(new ControllerInput.Listener() {
-            @Override
-            public void onDirection(int dx, int dy) {
-                if (paused) movePauseSelection(dy);
-                else if (!gameOver && !gameWon) queueDirection(dx, dy);
-            }
-
-            @Override
-            public void onStart() {
-                handleStartButton();
-            }
-        });
-
         if (paused) return;
         tickCount++;
         updateHudEffects();
@@ -334,6 +315,7 @@ final class GamePanel extends JPanel implements ActionListener {
             if (bossIntro && readyTimer == BOSS_INTRO_TICKS - 15) {
                 SoundPlayer.play(Sound.BOSS_ROAR);
                 effects.shake(1.1, 7);
+                Gamepad.rumble(0.6f, 0.6f, 900);
             }
             if (--readyTimer <= 0) {
                 waitingToStart = false;
@@ -462,6 +444,7 @@ final class GamePanel extends JPanel implements ActionListener {
         score += CAT_POINTS;
         popups.add(new Popup(cat.x, cat.y, cat.personality.catName.toUpperCase() + " +" + CAT_POINTS, 0));
         SoundPlayer.play(Sound.EAT_CAT);
+        Gamepad.rumble(0.3f, 0.5f, 150);
     }
 
     /** For tests. */
@@ -470,6 +453,7 @@ final class GamePanel extends JPanel implements ActionListener {
     }
 
     private void killPlayer() {
+        Gamepad.rumble(0.7f, 1f, 450);
         dying = true;
         deathTimer = DEATH_TICKS;
         SoundPlayer.stopMusic();
@@ -505,6 +489,7 @@ final class GamePanel extends JPanel implements ActionListener {
             score += BOSS_BONUS;
             popups.add(new Popup(bossX, bossY, "BOSS BONUS +" + BOSS_BONUS, 0));
             SoundPlayer.play(Sound.BOSS_EXPLODE);
+            Gamepad.rumble(1f, 1f, 800);
         }
         if (bossDefeatTimer <= 0) {
             gameWon = true;
@@ -564,6 +549,7 @@ final class GamePanel extends JPanel implements ActionListener {
     }
 
     private void handleInitialsKey(int key, char ch) {
+        padLetter = 0; // typing on the keyboard takes over from the controller
         if (key == KeyEvent.VK_ENTER && initials.length() == 3) {
             submitInitials();
         } else if (key == KeyEvent.VK_ESCAPE) {
@@ -635,23 +621,93 @@ final class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    private void handleStartButton() {
-        if (paused) {
-            choosePauseOption();
-            return;
-        }
-        if (canPause()) {
-            pause();
-            return;
-        }
+    // =====================================================================
+    // Controller (see Gamepad): D-pad/stick, Cross|A = confirm, Circle|B = back, Options|Start
+    // =====================================================================
+
+    /** Letter being picked with the controller on the initials screen (0 = none yet). */
+    char padLetter;
+    private static final String LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    @Override
+    public void padDirection(int dx, int dy) {
         if (enteringName) {
-            if (initials.length() == 3) submitInitials();
-            else enteringName = false;
-        } else if (gameOver) {
-            startNewGame();
+            if (dy != 0) cyclePadLetter(-dy);      // up = next letter
+            else if (dx > 0) padConfirm();
+            else if (dx < 0) padBack();
+        } else if (paused) {
+            if (dy != 0) movePauseSelection(dy);
+        } else if (!gameOver && !gameWon && !bossDefeated) {
+            queueDirection(dx, dy);
+        }
+    }
+
+    @Override
+    public void padConfirm() {
+        if (enteringName) {
+            if (padLetter == 0) {
+                padLetter = 'A';
+            } else {
+                initials += padLetter;
+                padLetter = initials.length() < 3 ? 'A' : 0;
+                if (initials.length() == 3) submitInitials();
+            }
+        } else if (paused) {
+            choosePauseOption();
         } else if (gameWon) {
             nextLevel();
+        } else if (gameOver) {
+            startNewGame();
         }
+    }
+
+    @Override
+    public void padBack() {
+        if (enteringName) {
+            if (!initials.isEmpty()) {                 // step back to the previous letter
+                padLetter = initials.charAt(initials.length() - 1);
+                initials = initials.substring(0, initials.length() - 1);
+            } else if (padLetter != 0) {
+                padLetter = 0;
+            } else {
+                enteringName = false;                  // skip saving
+            }
+        } else if (paused) {
+            resume();
+        } else if (gameOver) {
+            RatMan.showMenu();
+        }
+    }
+
+    @Override
+    public void padStart() {
+        if (paused) {
+            resume();
+        } else if (canPause()) {
+            pause();
+        } else if (enteringName) {
+            if (padLetter != 0 && initials.length() < 3) initials += padLetter;
+            padLetter = 0;
+            if (initials.length() == 3) submitInitials();
+            else enteringName = false;
+        } else if (gameWon) {
+            nextLevel();
+        } else if (gameOver) {
+            startNewGame();
+        }
+    }
+
+    private void cyclePadLetter(int step) {
+        if (initials.length() >= 3) return;
+        int i = padLetter == 0 ? 0 : Math.floorMod(LETTERS.indexOf(padLetter) + step, LETTERS.length());
+        padLetter = LETTERS.charAt(i);
+        SoundPlayer.play(Sound.CLICK);
+    }
+
+    /** What the initials slots show: typed letters, the letter being picked, then blanks. */
+    String initialsDisplay() {
+        String s = initials + (padLetter != 0 && initials.length() < 3 ? String.valueOf(padLetter) : "");
+        return (s + "___").substring(0, 3);
     }
 
     // =====================================================================

@@ -9,7 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 /** Title screen with START and SKINS buttons. */
-final class Menu extends JPanel {
+final class Menu extends JPanel implements Gamepad.Target {
     private static final int W = 500, H = 470;
     private static final int PATH_Y = 418; // little chase scene along the bottom
 
@@ -41,6 +41,25 @@ final class Menu extends JPanel {
         settings.setBounds(95, 348, 310, 54);
         settings.addActionListener(e -> RatMan.showSettings());
         add(settings);
+
+        pad = new PadMenu(1, null, java.util.List.of(start, howTo, skins, settings));
+    }
+
+    private final PadMenu pad;
+
+    @Override
+    public void padDirection(int dx, int dy) {
+        pad.padDirection(0, dy != 0 ? dy : dx);
+    }
+
+    @Override
+    public void padConfirm() {
+        pad.padConfirm();
+    }
+
+    @Override
+    public void padStart() {
+        pad.padStart();
     }
 
     @Override

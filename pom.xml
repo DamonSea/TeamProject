@@ -12,18 +12,18 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jinput.version>2.0.10</jinput.version>
+        <jamepad.version>2.30.0.0</jamepad.version>
         <main.class>ratman.RatMan</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
-        <natives.dir>${project.build.directory}/natives</natives.dir>
     </properties>
 
     <dependencies>
-        <!-- Gamepad / Xbox controller support -->
+        <!-- Game controllers (PS5, PS4, Xbox, Switch Pro, ...) via SDL; native code for
+             Windows, macOS (Intel + Apple Silicon) and Linux is bundled in the jar -->
         <dependency>
-            <groupId>net.java.jinput</groupId>
-            <artifactId>jinput</artifactId>
-            <version>${jinput.version}</version>
+            <groupId>com.badlogicgames.jamepad</groupId>
+            <artifactId>jamepad</artifactId>
+            <version>${jamepad.version}</version>
         </dependency>
     </dependencies>
 
@@ -31,34 +31,12 @@
         <!-- target/rat-man.jar (no version in the name, so the app packaging scripts can find it) -->
         <finalName>rat-man</finalName>
         <plugins>
-            <!-- Unpack JInput's native libraries (Windows/macOS/Linux) into target/natives
-                 instead of committing .dll files to the repo. -->
+            <!-- Copy runtime libraries (Jamepad and its loader) to target/lib for building the desktop apps -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>3.6.1</version>
                 <executions>
-                    <execution>
-                        <id>unpack-jinput-natives</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>net.java.jinput</groupId>
-                                    <artifactId>jinput</artifactId>
-                                    <version>${jinput.version}</version>
-                                    <classifier>natives-all</classifier>
-                                    <type>jar</type>
-                                    <outputDirectory>${natives.dir}</outputDirectory>
-                                    <excludes>META-INF/**</excludes>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                    <!-- Copy runtime libraries (JInput) to target/lib for building the desktop apps -->
                     <execution>
                         <id>copy-libs</id>
                         <phase>package</phase>
@@ -78,14 +56,6 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.2.0</version>
-                <configuration>
-                    <systemProperties>
-                        <systemProperty>
-                            <key>net.java.games.input.librarypath</key>
-                            <value>${natives.dir}</value>
-                        </systemProperty>
-                    </systemProperties>
-                </configuration>
             </plugin>
 
             <!-- mvn package → target/rat-man.jar with Main-Class set -->

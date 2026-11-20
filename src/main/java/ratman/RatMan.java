@@ -3,7 +3,6 @@ package ratman;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import java.io.File;
 
 /** Entry point: owns the window and swaps between the menu, skins and game screens. */
 public final class RatMan {
@@ -13,13 +12,18 @@ public final class RatMan {
     private RatMan() {}
 
     public static void main(String[] args) {
-        configureControllerNatives();
         useSameLookOnEveryOs();
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Rat-Man");
             setAppIcon(frame);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setResizable(false);
+            // Controller support: start SDL once, then poll ~60x a second and hand the
+            // actions to whichever screen is showing.
+            Gamepad.install(Gamepad.start());
+            new javax.swing.Timer(16, e -> Gamepad.current().poll(
+                    frame.getContentPane() instanceof Gamepad.Target t ? t : null)).start();
+
             showMenu();
             frame.setVisible(true);
         });
@@ -91,15 +95,4 @@ public final class RatMan {
         }
     }
 
-    /**
-     * JInput needs its native libraries. `mvn compile` unpacks them to target/natives;
-     * point JInput there when running from an IDE so controllers work without extra flags.
-     */
-    private static void configureControllerNatives() {
-        String key = "net.java.games.input.librarypath";
-        File natives = new File("target/natives");
-        if (System.getProperty(key) == null && natives.isDirectory()) {
-            System.setProperty(key, natives.getAbsolutePath());
-        }
-    }
 }

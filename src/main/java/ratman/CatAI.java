@@ -217,6 +217,7 @@ final class CatAI {
                 game.bossStateTimer = DIZZY_TICKS;
                 game.effects.shake(0.35, 5);
                 SoundPlayer.play(SoundPlayer.Sound.BOSS_THUD);
+                Gamepad.rumble(1f, 1f, 250);
                 return;
             }
             game.bossX = nx;

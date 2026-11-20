@@ -26,19 +26,22 @@ Requires **Java 17+** and **Maven**.
 mvn compile exec:java
 ```
 
-Or open the folder in IntelliJ as a Maven project, run `mvn compile` once (this unpacks the
-controller libraries into `target/natives`), then run `ratman.RatMan`.
+Or open the folder in IntelliJ as a Maven project and run `ratman.RatMan`.
 
 To build a jar: `mvn package` → `target/rat-man-1.1.0.jar`.
 
 ## Controls
 
-| Action | Keyboard | Xbox controller |
+| Action | Keyboard | Controller (PS5, PS4, Xbox, Switch Pro…) |
 |---|---|---|
 | Move | Arrow keys or WASD | D-pad or left stick |
-| Next level / restart | R or Enter | Start (Button 6) |
-| Pause menu | P or Esc (arrows + Enter to choose) | Start |
-| Enter initials | Type 3 letters, Enter to save, Esc to skip | Start skips |
+| Menus | Mouse | D-pad to choose, Cross / A to select, Circle / B to go back |
+| Pause menu | P or Esc (arrows + Enter to choose) | Options / Start (D-pad + Cross / A to choose) |
+| Next level / restart | R or Enter | Cross / A |
+| Enter initials | Type 3 letters, Enter to save, Esc to skip | Up/Down picks a letter, Cross / A confirms, Circle / B goes back |
+
+Controllers work over USB or Bluetooth and can be connected any time. A PS5 controller's light bar
+turns cheese-yellow, and controllers rumble when things happen (turn it off in **Settings**).
 
 Debug mode (999 lives; press `0` to clear a level):
 `mvn compile exec:java -Dratman.debug=true`
@@ -81,9 +84,9 @@ src/main/java/ratman/
   Theme.java, Skin.java
   Leaderboard.java     high scores in leaderboard.txt
   SoundPlayer.java     music loops + sound effects
-  Assets.java, ControllerInput.java, UiStyle.java
+  Gamepad.java, PadMenu.java   controller support (Jamepad / SDL) and menu navigation
+  Assets.java, UiStyle.java
   Menu.java, SkinsMenu.java
-  tools/ControllerTester.java   prints raw gamepad events (for debugging controllers)
 src/main/resources/    images, sounds, fonts, maze themes, levels/
 tools/make_audio.py    chiptune synthesiser that generates all the game's audio
 ```
