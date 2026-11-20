@@ -1,16 +1,22 @@
 # Builds Rat-Man as a desktop app for macOS and Windows (Java bundled inside, nothing else to install)
 # and publishes them on the GitHub Releases page.
 #
-# To publish a new version:  git tag v1.1.0 && git push origin v1.1.0
-# Only the parts of Java the game uses (desktop + logging) are bundled, which keeps the app ~60 MB.
-# You can also run it by hand from the Actions tab ("Run workflow") to just build the apps;
-# they then appear as downloadable artifacts on that run instead of as a release.
+# To publish a new version (either way works):
+#   - On GitHub: Actions tab -> "Build apps" -> "Run workflow", type a version like 1.1.0, click Run.
+#   - Or from a terminal:  git tag v1.1.0 && git push origin v1.1.0
+# Run it with the version box empty to just build the apps (they appear as downloads on that run).
+# Only the parts of Java the game uses (desktop + logging) are bundled, keeping each app ~34 MB.
 name: Build apps
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.0.0 (leave empty to just build, no release)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -42,7 +48,9 @@ jobs:
       - name: Work out the version number
         shell: bash
         run: |
-          V="${GITHUB_REF_NAME#v}"
+          V="${{ github.event.inputs.version }}"
+          if [[ -z "$V" ]]; then V="${GITHUB_REF_NAME#v}"; fi
+          V="${V#v}"
           if [[ ! "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then V="1.0.0"; fi
           echo "APP_VERSION=$V" >> "$GITHUB_ENV"
 
@@ -105,7 +113,7 @@ jobs:
   release:
     name: Publish release
     needs: package
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +125,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            V="${{ github.event.inputs.version }}"
+            TAG="v${V#v}"
+          fi
           ls -la dist
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "Rat-Man $GITHUB_REF_NAME" \
+          # creates the tag on this commit if it doesn't exist yet
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "Rat-Man $TAG" \
             --notes-file packaging/RELEASE_NOTES.md

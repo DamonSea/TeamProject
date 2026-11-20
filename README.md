@@ -11,12 +11,9 @@ steps for unsigned apps are listed there.
 
 ## Publishing a new version
 
-Tag a commit and push the tag; GitHub Actions builds the apps and creates the release:
-
-```bash
-git tag v1.1.0
-git push origin v1.1.0
-```
+On GitHub, open the **Actions** tab → **Build apps** → **Run workflow**, type a version such as
+`1.1.0`, and click **Run workflow**. A few minutes later the Mac and Windows apps appear on the
+Releases page. (Pushing a `v1.1.0` git tag does the same thing.)
 
 The workflow is `.github/workflows/release.yml`; the download page text is `packaging/RELEASE_NOTES.md`;
 the app icon comes from `packaging/make_icon.py`.
