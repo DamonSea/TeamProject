@@ -136,24 +136,28 @@ final class Renderer {
         if (game.isBossLevel()) {
             int fw = boss.getHeight();
             ArtBox box = artBox(boss, fw);
-            int cx = game.bossX * T + T / 2, cy = game.bossY * T + T / 2;
+            int cx = (int) Math.round(game.slide(game.bossPrevX, game.bossX, game.bossMoveTick, 1) * T) + T / 2;
+            int cy = (int) Math.round(game.slide(game.bossPrevY, game.bossY, game.bossMoveTick, 1) * T) + T / 2;
             int sx = frame * fw + box.x();
             g.drawImage(boss, cx - BOSS_WIDTH / 2, cy - BOSS_WIDTH / 2, cx + BOSS_WIDTH / 2, cy + BOSS_WIDTH / 2,
                     sx, box.y(), sx + box.size(), box.y() + box.size(), null);
             return;
         }
         for (Cat cat : game.activeCats()) {
+            // pixel centre of the cat, sliding smoothly between tiles
+            int cx = (int) Math.round(game.slide(cat.prevX, cat.x, cat.moveTick, cat.moveTicks) * T) + T / 2;
+            int cy = (int) Math.round(game.slide(cat.prevY, cat.y, cat.moveTick, cat.moveTicks) * T) + T / 2;
             if (cat.eyes) {
                 // The eyes sheet is just eyes, so cropping it would blow them up. Draw the whole frame
                 // at the same pixel scale as the scared-cat sheet (same 64px frames) so they line up.
                 int fullFrame = CAT_SIZE * catsScared.getHeight() / artBox(catsScared, catsScared.getHeight()).size();
-                int px = cat.x * T + T / 2 - fullFrame / 2, py = cat.y * T + T / 2 - fullFrame / 2;
+                int px = cx - fullFrame / 2, py = cy - fullFrame / 2;
                 int fw = catEyes.getHeight(), sx = frame * fw;
                 g.drawImage(catEyes, px, py, px + fullFrame, py + fullFrame, sx, 0, sx + fw, fw, null);
             } else if (cat.frightened && !flashWarning()) {
-                drawSprite(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cat.x, cat.y, CAT_SIZE);
+                drawSprite(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cx, cy, CAT_SIZE);
             } else {
-                drawSprite(g, cats, cat.index * 2 + frame, cats.getHeight(), cat.x, cat.y, CAT_SIZE);
+                drawSprite(g, cats, cat.index * 2 + frame, cats.getHeight(), cx, cy, CAT_SIZE);
             }
         }
     }
@@ -177,11 +181,11 @@ final class Renderer {
         drawFacing(g, death, phase, fw);
     }
 
-    /** Draws frame {@code index} of a sheet, cropped to its artwork, {@code size} px square, centred on tile (x, y). */
-    private void drawSprite(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int x, int y, int size) {
+    /** Draws frame {@code index} of a sheet, cropped to its artwork, {@code size} px square, centred on pixel (cx, cy). */
+    private void drawSprite(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int cx, int cy, int size) {
         ArtBox box = artBox(sheet, frameWidth);
         int sx = index * frameWidth + box.x();
-        int px = x * T + T / 2 - size / 2, py = y * T + T / 2 - size / 2;
+        int px = cx - size / 2, py = cy - size / 2;
         g.drawImage(sheet, px, py, px + size, py + size, sx, box.y(), sx + box.size(), box.y() + box.size(), null);
     }
 
@@ -191,7 +195,9 @@ final class Renderer {
      */
     private void drawFacing(Graphics2D g, BufferedImage sheet, int index, int frameWidth) {
         java.awt.geom.AffineTransform saved = g.getTransform();
-        g.translate(game.playerX * T + T / 2.0, game.playerY * T + T / 2.0);
+        double px = game.dying ? game.playerX : game.slide(game.prevX, game.playerX, game.playerMoveTick, 1);
+        double py = game.dying ? game.playerY : game.slide(game.prevY, game.playerY, game.playerMoveTick, 1);
+        g.translate(px * T + T / 2.0, py * T + T / 2.0);
         switch (game.facing) {
             case LEFT -> g.scale(-1, 1);
             case UP -> g.rotate(-Math.PI / 2);
