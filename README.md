@@ -6,7 +6,8 @@ Grab the big cheese to power up and eat the cats. Every 4th level is a boss leve
 ## Play it (no Java needed)
 
 Download the Mac or Windows app from the
-[**Releases page**](https://github.com/DamonSea/TeamProject/releases/latest). The first-launch
+[**Releases page**](https://github.com/DamonSea/TeamProject/releases/latest), and see what changed
+in each version in the [**changelog**](CHANGELOG.md). The first-launch
 steps for unsigned apps are listed there.
 
 ## Publishing a new version
@@ -16,8 +17,8 @@ steps for unsigned apps are listed there.
 2. On GitHub, open the **Actions** tab → **Build apps** → **Run workflow**, type the same version
    (`1.3.0`), and click **Run workflow**.
 
-That version's changelog section becomes the "What's new" at the top of its release page. A few minutes later the Mac and Windows apps appear on the
-Releases page. (Pushing a `v1.1.0` git tag does the same thing.)
+A few minutes later the Mac and Windows apps appear on the Releases page, with that version's
+changelog section as the "What's new" at the top. (Pushing a `v1.3.0` git tag does the same thing.)
 
 The workflow is `.github/workflows/release.yml`; the download page text is `packaging/RELEASE_NOTES.md`;
 the app icon comes from `packaging/make_icon.py`.
