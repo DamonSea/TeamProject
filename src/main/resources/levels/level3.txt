@@ -1,0 +1,27 @@
+; Rat-Man level. 21 rows of 21 characters.
+;   #  wall          .  dot           o  big cheese (power-up)
+;   P  player start  C  cat cage (must be the 3x3 block in the exact centre)
+;   (space)  open floor with no dot. An open cell on the left/right edge is a wrap-around tunnel.
+; Lines starting with ; are comments.
+name: Labyrinth
+#####################
+#...................#
+#.########.########.#
+#o#...............#o#
+#.#.#############.#.#
+#...#....###....#...#
+#.#.#.##.###.##.#.#.#
+#.#.#.##.. ..##.#.#.#
+#.#.#.#### ####.#.#.#
+#.#.....#CCC#.....#.#
+  #.### #CCC# ###.#  
+#.#...# #CCC# #...#.#
+#.###.# ## ## #.###.#
+#...#.# .. .. #.#...#
+#.#.#.#########.#.#.#
+#........###........#
+#.#.####.###.####.#.#
+#o#...............#o#
+#.########.########.#
+#.........P.........#
+#####################

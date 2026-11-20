@@ -143,7 +143,7 @@ final class GamePanel extends JPanel implements ActionListener {
     private void startLevel() {
         lives = DEBUG ? 999 : START_LIVES;
         theme = Theme.forLevel(level);
-        maze = Maze.generate(random, theme);
+        maze = Settings.randomMazes() ? Maze.generate(random, theme) : Maze.designed(level, random, theme);
         setBackground(theme.background);
 
         gameWon = false;
@@ -160,8 +160,8 @@ final class GamePanel extends JPanel implements ActionListener {
 
     /** Puts everyone back at their start positions (new level or after losing a life). */
     void resetPositions() {
-        playerX = Maze.START_X;
-        playerY = Maze.START_Y;
+        playerX = maze.startX();
+        playerY = maze.startY();
         moveDx = moveDy = queuedDx = queuedDy = 0;
         facing = Facing.RIGHT;
         poweredUp = false;

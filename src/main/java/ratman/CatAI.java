@@ -86,6 +86,7 @@ final class CatAI {
     }
 
     private static boolean isOccupied(GamePanel game, Cat self, int x, int y) {
+        if (Maze.inCage(x, y)) return false; // cats can squeeze past each other inside the cage
         for (Cat other : game.activeCats()) {
             if (other != self && other.isAt(x, y)) return true;
         }

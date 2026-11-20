@@ -18,19 +18,24 @@ final class Menu extends JPanel {
         setLayout(null);
 
         UiStyle.Title title = new UiStyle.Title("Rat-Man", Assets.font("/fonts/GinkobRetroFont.ttf", 100f));
-        title.setBounds(0, 40, W, 140);
+        title.setBounds(0, 25, W, 140);
         add(title);
 
         Font buttonFont = Assets.font("/fonts/RetroNakjoy-Regular.otf", 30f);
         UiStyle.RetroButton start = UiStyle.RetroButton.cheese("START", buttonFont);
-        start.setBounds(150, 205, 200, 66);
+        start.setBounds(125, 180, 250, 60);
         start.addActionListener(e -> RatMan.startGame());
         add(start);
 
         UiStyle.RetroButton skins = UiStyle.RetroButton.cheese("SKINS", buttonFont);
-        skins.setBounds(150, 290, 200, 66);
+        skins.setBounds(125, 250, 250, 60);
         skins.addActionListener(e -> RatMan.showSkins());
         add(skins);
+
+        UiStyle.RetroButton settings = UiStyle.RetroButton.cheese("SETTINGS", buttonFont);
+        settings.setBounds(125, 320, 250, 60);
+        settings.addActionListener(e -> RatMan.showSettings());
+        add(settings);
     }
 
     @Override

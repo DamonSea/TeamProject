@@ -1,22 +1,35 @@
 package ratman;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 /**
- * A randomly generated 20x20 maze with dots, power pellets ("cheese") and the cat cage.
+ * A 21x21 maze with dots, power pellets ("cheese") and the cat cage in the exact centre.
+ * Either loaded from a hand-designed level file (src/main/resources/levels) or randomly generated.
  * Arrays are indexed [row][col]; public helpers take (x = col, y = row).
  */
 public final class Maze {
-    public static final int ROWS = 20;
-    public static final int COLS = 20;
+    public static final int ROWS = 21;
+    public static final int COLS = 21;
 
     /** The cage is the 3x3 block centred on (CAGE_X, CAGE_Y). */
     public static final int CAGE_X = 10;
     public static final int CAGE_Y = 10;
 
-    /** Where the player starts each life. */
-    public static final int START_X = 1;
-    public static final int START_Y = 1;
+    /** Number of hand-designed levels (levels/level1.txt ... levelN.txt); level 4 is the boss arena. */
+    public static final int DESIGNED_LEVELS = 4;
+
+    /** Where the player starts each life (random mazes start top-left). */
+    private int startX = 1;
+    private int startY = 1;
+    private String name = "Random";
 
     /** Rows with a wrap-around tunnel on the left/right edge. */
     private static final int[] TUNNEL_ROWS = {9, 10};
@@ -34,12 +47,84 @@ public final class Maze {
         m.carve(random);
         m.buildCage();
         m.removeUnreachableDots();
+        m.pickTiles(random, theme);
+        return m;
+    }
+
+    /** The hand-designed maze for a level number; levels cycle through the designs. */
+    public static Maze designed(int level, Random random, Theme theme) {
+        int n = (level - 1) % DESIGNED_LEVELS + 1;
+        return load("/levels/level" + n + ".txt", random, theme);
+    }
+
+    /**
+     * Reads a level file: 21 rows of 21 characters (see the comment at the top of each file).
+     * The cage is always rebuilt in the centre so a typo in the file can't break the cats.
+     */
+    static Maze load(String path, Random random, Theme theme) {
+        List<String> rows = new ArrayList<>();
+        String name = path;
+        try (InputStream in = Maze.class.getResourceAsStream(path)) {
+            if (in == null) throw new IllegalStateException("Missing level file " + path);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.startsWith(";")) continue;
+                if (line.startsWith("name:")) {
+                    name = line.substring(5).trim();
+                    continue;
+                }
+                if (line.isEmpty() && rows.isEmpty()) continue;
+                rows.add(line);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        if (rows.size() < ROWS) {
+            throw new IllegalStateException(path + " needs " + ROWS + " rows, found " + rows.size());
+        }
+
+        Maze m = new Maze();
+        m.name = name;
+        boolean foundStart = false;
         for (int r = 0; r < ROWS; r++) {
+            String row = rows.get(r);
             for (int c = 0; c < COLS; c++) {
-                m.tileVariant[r][c] = theme.pickVariant(random.nextDouble());
+                char ch = c < row.length() ? row.charAt(c) : '#';
+                m.walls[r][c] = ch == '#';
+                m.dots[r][c] = ch == '.';
+                m.pellets[r][c] = ch == 'o';
+                if (ch == 'P') {
+                    m.startX = c;
+                    m.startY = r;
+                    foundStart = true;
+                }
             }
         }
+        if (!foundStart) throw new IllegalStateException(path + " has no player start (P)");
+        m.buildCage();
+        m.removeUnreachableDots();
+        m.pickTiles(random, theme);
         return m;
+    }
+
+    private void pickTiles(Random random, Theme theme) {
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                tileVariant[r][c] = theme.pickVariant(random.nextDouble());
+            }
+        }
+    }
+
+    public int startX() {
+        return startX;
+    }
+
+    public int startY() {
+        return startY;
+    }
+
+    public String name() {
+        return name;
     }
 
     /** Same generation algorithm as the original game: border ring, random 3x3 rooms, long corridors. */
@@ -95,7 +180,7 @@ public final class Maze {
         }
     }
 
-    /** Solid 3x3 cage with the centre open and doors above and below it. */
+    /** 3x3 cage: the middle row is open floor for the cats, with doors above and below the centre. */
     private void buildCage() {
         for (int r = CAGE_Y - 1; r <= CAGE_Y + 1; r++) {
             for (int c = CAGE_X - 1; c <= CAGE_X + 1; c++) {
@@ -104,7 +189,7 @@ public final class Maze {
                 pellets[r][c] = false;
             }
         }
-        walls[CAGE_Y][CAGE_X] = false;
+        for (int c = CAGE_X - 1; c <= CAGE_X + 1; c++) walls[CAGE_Y][c] = false;
         walls[CAGE_Y + 1][CAGE_X] = false;
         walls[CAGE_Y - 1][CAGE_X] = false;
     }
@@ -117,8 +202,8 @@ public final class Maze {
     private void removeUnreachableDots() {
         boolean[][] reached = new boolean[ROWS][COLS];
         java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
-        reached[START_Y][START_X] = true;
-        queue.add(new int[]{START_X, START_Y});
+        reached[startY][startX] = true;
+        queue.add(new int[]{startX, startY});
         int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
         while (!queue.isEmpty()) {
             int[] p = queue.poll();
