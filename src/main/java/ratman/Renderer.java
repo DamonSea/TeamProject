@@ -80,10 +80,16 @@ final class Renderer {
         }
     }
 
+    private static final Color CAGE_FLOOR = new Color(125, 105, 80);
+
     private void drawCage(Graphics2D g) {
         int fw = cage.getWidth() / 2;
         int sx = game.cageDoorTimer > 0 ? fw : 0;
         int cx = (Maze.CAGE_X - 1) * T, cy = (Maze.CAGE_Y - 1) * T;
+        // Solid floor behind the bars so the level's wall tiles don't show through them.
+        // In Cage.png the bars cover x 1-28, y 10-25 of each 30x30 frame (scaled x3 here).
+        g.setColor(CAGE_FLOOR);
+        g.fillRect(cx + 3, cy + 30, 84, 48);
         g.drawImage(cage, cx, cy, cx + 3 * T, cy + 3 * T, sx, 0, sx + fw, cage.getHeight(), null);
     }
 
@@ -114,21 +120,28 @@ final class Renderer {
         Skin skin = Skin.selected();
         BufferedImage sheet = skin.sheet();
         int fw = sheet.getWidth() / skin.frameCount;
-        drawFrame(g, sheet, game.animTick % skin.frameCount, fw, game.playerX, game.playerY);
+        drawFrame(g, sheet, game.animTick % skin.frameCount, fw, game.playerX, game.playerY, game.facingLeft);
     }
 
     private void drawDeath(Graphics2D g) {
         int fw = death.getWidth() / DEATH_FRAMES;
         int elapsed = GamePanel.DEATH_TICKS - game.deathTimer;
         int phase = Math.min(DEATH_FRAMES - 1, Math.max(0, elapsed * DEATH_FRAMES / GamePanel.DEATH_TICKS));
-        drawFrame(g, death, phase, fw, game.playerX, game.playerY);
+        drawFrame(g, death, phase, fw, game.playerX, game.playerY, game.facingLeft);
     }
 
     /** Draws frame {@code index} (each {@code frameWidth} px wide) of a sheet, scaled into tile (x, y). */
     private static void drawFrame(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int x, int y) {
+        drawFrame(g, sheet, index, frameWidth, x, y, false);
+    }
+
+    /** Same, optionally mirrored left-to-right (sprites are drawn facing right). */
+    private static void drawFrame(Graphics2D g, BufferedImage sheet, int index, int frameWidth,
+                                  int x, int y, boolean mirror) {
         int sx = index * frameWidth;
         int px = x * T, py = y * T;
-        g.drawImage(sheet, px, py, px + T, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+        int left = mirror ? px + T : px, right = mirror ? px : px + T;
+        g.drawImage(sheet, left, py, right, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
     }
 
     // ---- HUD & overlays ----

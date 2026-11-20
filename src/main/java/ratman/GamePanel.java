@@ -56,6 +56,7 @@ final class GamePanel extends JPanel implements ActionListener {
     int playerX, playerY;
     int moveDx, moveDy;       // current direction
     int queuedDx, queuedDy;   // buffered turn, applied as soon as it's possible
+    boolean facingLeft;       // sprite is mirrored when the last sideways move was to the left
     boolean poweredUp;
     int powerTimer;
 
@@ -146,6 +147,7 @@ final class GamePanel extends JPanel implements ActionListener {
         playerX = Maze.START_X;
         playerY = Maze.START_Y;
         moveDx = moveDy = queuedDx = queuedDy = 0;
+        facingLeft = false;
         poweredUp = false;
         powerTimer = 0;
 
@@ -242,6 +244,7 @@ final class GamePanel extends JPanel implements ActionListener {
 
         playerX = nx;
         playerY = ny;
+        if (moveDx != 0) facingLeft = moveDx < 0;
 
         if (maze.hasDot(playerX, playerY)) {
             maze.eatDot(playerX, playerY);
