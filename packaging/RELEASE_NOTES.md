@@ -34,9 +34,12 @@ then open it again.
 
 ### How to play
 
-- **Move:** arrow keys or WASD (Xbox controller works on Windows)
-- **Pause:** P or Esc
+- **Move:** arrow keys or WASD, or a controller's D-pad / left stick
+- **Pause:** P or Esc, or Options / Start
+- **Controllers:** PS5, PS4, Xbox and Switch Pro, over USB or Bluetooth, on Mac and Windows. Every menu works with the D-pad + Cross / A.
 - Check **HOW TO PLAY** on the main menu for the rules and the cats' strategies.
-- **Settings** has toggles for music, sound effects, and random mazes.
+- **Settings** has toggles for music, sound effects, rumble, and random mazes.
+
+Every version's changes are listed in the [changelog](https://github.com/DamonSea/TeamProject/blob/main/CHANGELOG.md).
 
 High scores are saved on your own computer.

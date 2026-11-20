@@ -11,8 +11,12 @@ steps for unsigned apps are listed there.
 
 ## Publishing a new version
 
-On GitHub, open the **Actions** tab → **Build apps** → **Run workflow**, type a version such as
-`1.1.0`, and click **Run workflow**. A few minutes later the Mac and Windows apps appear on the
+1. Add a `## v1.3.0 — Short name (date)` section at the top of [`CHANGELOG.md`](CHANGELOG.md)
+   listing what's new. GIFs go in `docs/media/`.
+2. On GitHub, open the **Actions** tab → **Build apps** → **Run workflow**, type the same version
+   (`1.3.0`), and click **Run workflow**.
+
+That version's changelog section becomes the "What's new" at the top of its release page. A few minutes later the Mac and Windows apps appear on the
 Releases page. (Pushing a `v1.1.0` git tag does the same thing.)
 
 The workflow is `.github/workflows/release.yml`; the download page text is `packaging/RELEASE_NOTES.md`;

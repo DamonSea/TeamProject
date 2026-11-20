@@ -129,8 +129,18 @@ jobs:
             TAG="v${V#v}"
           fi
           ls -la dist
+          # Release page = this version's section of CHANGELOG.md, then the install guide
+          awk -v tag="$TAG" '
+            /^## v/ { show = (index($0, "## " tag " ") == 1 || $0 == "## " tag) }
+            show' CHANGELOG.md | sed '1s/^## /## What'"'"'s new in /' > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::warning::CHANGELOG.md has no '## $TAG' section, so the release page will have no What's new"
+          else
+            printf '\n---\n\n' >> notes.md
+          fi
+          cat packaging/RELEASE_NOTES.md >> notes.md
           # creates the tag on this commit if it doesn't exist yet
           gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \
             --title "Rat-Man $TAG" \
-            --notes-file packaging/RELEASE_NOTES.md
+            --notes-file notes.md
