@@ -1,0 +1,37 @@
+# Rewrites the text of existing release pages from CHANGELOG.md + packaging/RELEASE_NOTES.md.
+# Use it after fixing a typo in the changelog, or to refresh old releases.
+# GitHub → Actions → "Update release notes" → Run workflow.
+name: Update release notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update, e.g. 1.2.0 (leave empty to update every release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update the release pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ github.event.inputs.version }}"
+          if [ -n "$V" ]; then TAGS="v${V#v}"; else TAGS=$(gh release list --limit 100 --json tagName --jq '.[].tagName'); fi
+          for TAG in $TAGS; do
+            awk -v tag="$TAG" '
+              /^## v/ { show = (index($0, "## " tag " ") == 1 || $0 == "## " tag) }
+              show' CHANGELOG.md | sed '1s/^## /## What'"'"'s new in /' > notes.md
+            if [ -s notes.md ]; then printf '\n---\n\n' >> notes.md
+            else echo "::warning::CHANGELOG.md has no '## $TAG' section"; fi
+            cat packaging/RELEASE_NOTES.md >> notes.md
+            gh release edit "$TAG" --notes-file notes.md
+            echo "Updated $TAG"
+          done
