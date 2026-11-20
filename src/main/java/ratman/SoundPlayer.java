@@ -27,7 +27,15 @@ public final class SoundPlayer {
         CAT_FREE("sfx_cat_free.wav"),
         START("jingle_start.wav"),
         LEVEL_CLEAR("jingle_level_clear.wav"),
-        GAME_OVER("jingle_game_over.wav");
+        GAME_OVER("jingle_game_over.wav"),
+        POP("sfx_pop.wav"),
+        BOSS_WARNING("sfx_boss_warning.wav"),
+        BOSS_ROAR("sfx_boss_roar.wav"),
+        BOSS_WINDUP("sfx_boss_windup.wav"),
+        BOSS_DASH("sfx_boss_dash.wav"),
+        BOSS_THUD("sfx_boss_thud.wav"),
+        BOSS_EXPLODE("sfx_boss_explode.wav"),
+        BOSS_DEFEAT("jingle_boss_defeat.wav");
 
         final String path;
 

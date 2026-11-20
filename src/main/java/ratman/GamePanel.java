@@ -78,6 +78,24 @@ final class GamePanel extends JPanel implements ActionListener {
             new Cat(2, Cat.Personality.FLANKER, Maze.CAGE_X + 1, Maze.CAGE_Y, 60));
     int bossX, bossY;
     int bossDirX, bossDirY;
+
+    /** The boss chases, but every so often lines up and POUNCES down a corridor. */
+    enum BossState { CHASE, WINDUP, DASH, DIZZY }
+    static final int BOSS_INTRO_TICKS = 45;    // cinematic entrance (instead of the normal READY)
+    static final int BOSS_DEFEAT_TICKS = 30;   // flash, spin, explode, then Level Clear
+    static final int BOSS_EXPLODE_AT = 12;     // ticks left in the defeat sequence when it blows up
+    static final int BOSS_BONUS = 1000;
+    BossState bossState = BossState.CHASE;
+    int bossStateTimer;
+    int bossCooldown;
+    int dashDx, dashDy, dashTravelled;
+    boolean bossIntro;
+    boolean bossDefeated;
+    int bossDefeatTimer;
+
+    /** Particles and screen shake (visual only). */
+    final Effects effects = new Effects();
+    boolean deathPopped;                       // skins without death art pop into pixels mid-animation
     int bossPrevX, bossPrevY;
     long bossMoveTick;
     int ticksIntoLife;                    // drives the cats' scatter/chase waves
@@ -166,8 +184,10 @@ final class GamePanel extends JPanel implements ActionListener {
         setBackground(theme.background);
 
         SoundPlayer.stopMusic();
-        SoundPlayer.play(Sound.START);
         popups.clear();
+        effects.clear();
+        bossDefeated = false;
+        bossDefeatTimer = 0;
         gameWon = false;
         gameOver = false;
         enteringName = false;
@@ -176,6 +196,14 @@ final class GamePanel extends JPanel implements ActionListener {
         initials = "";
         animTick = 0;
         resetPositions();
+        if (isBossLevel()) {
+            // Cinematic entrance: warning siren, then the boss rises out of the cage with a roar
+            bossIntro = true;
+            readyTimer = BOSS_INTRO_TICKS;
+            SoundPlayer.play(Sound.BOSS_WARNING);
+        } else {
+            SoundPlayer.play(Sound.START);
+        }
         repaint();
     }
 
@@ -198,6 +226,11 @@ final class GamePanel extends JPanel implements ActionListener {
         ticksIntoLife = 0;
         catMode = CatAI.Mode.SCATTER;
         bossDirX = bossDirY = 0;
+        bossState = BossState.CHASE;
+        bossStateTimer = 0;
+        bossCooldown = 40;
+        bossIntro = false;
+        deathPopped = false;
         cageDoorTimer = 0;
 
         waitingToStart = true;
@@ -244,7 +277,7 @@ final class GamePanel extends JPanel implements ActionListener {
 
     /** Smoothed position (in tiles) between a previous and current tile. */
     double slide(int from, int to, long startTick, double lengthTicks) {
-        if (Math.abs(to - from) > 1) return to; // tunnel wrap: don't slide across the whole screen
+        if (Math.abs(to - from) > Maze.COLS / 2) return to; // tunnel wrap: don't slide across the whole screen
         double progress = (tickCount - startTick + frameAlpha()) / Math.max(1e-9, lengthTicks);
         progress = Math.min(1, Math.max(0, progress));
         return from + (to - from) * progress;
@@ -281,14 +314,30 @@ final class GamePanel extends JPanel implements ActionListener {
         updateHudEffects();
 
         if (dying) {
-            if (--deathTimer <= 0) finishDeath();
+            --deathTimer;
+            if (!Skin.selected().hasDeathArt && !deathPopped && deathTimer <= DEATH_TICKS * 45 / 100) {
+                deathPopped = true;
+                effects.burst(Skin.selected().icon(), playerX * TILE + TILE / 2.0, playerY * TILE + TILE / 2.0, 42, 1.0);
+                effects.shake(0.25, 4);
+                SoundPlayer.play(Sound.POP);
+            }
+            if (deathTimer <= 0) finishDeath();
+            return;
+        }
+        if (bossDefeated && !gameWon) {
+            updateBossDefeat();
             return;
         }
         if (gameOver || gameWon) return;
 
         if (waitingToStart) {
+            if (bossIntro && readyTimer == BOSS_INTRO_TICKS - 15) {
+                SoundPlayer.play(Sound.BOSS_ROAR);
+                effects.shake(1.1, 7);
+            }
             if (--readyTimer <= 0) {
                 waitingToStart = false;
+                bossIntro = false;
                 SoundPlayer.playMusic(isBossLevel() ? SoundPlayer.Track.BOSS : SoundPlayer.Track.LEVEL);
             }
             return;
@@ -351,9 +400,18 @@ final class GamePanel extends JPanel implements ActionListener {
         }
 
         if (maze.isCleared()) {
-            gameWon = true;
             SoundPlayer.stopMusic();
-            SoundPlayer.play(Sound.LEVEL_CLEAR);
+            if (isBossLevel()) {
+                // Defeat sequence first; Level Clear comes when it finishes
+                bossDefeated = true;
+                bossDefeatTimer = BOSS_DEFEAT_TICKS;
+                bossState = BossState.CHASE;
+                SoundPlayer.play(Sound.BOSS_ROAR);
+                effects.shake(0.6, 4);
+            } else {
+                gameWon = true;
+                SoundPlayer.play(Sound.LEVEL_CLEAR);
+            }
             return;
         }
         checkCollisions();
@@ -406,6 +464,11 @@ final class GamePanel extends JPanel implements ActionListener {
         SoundPlayer.play(Sound.EAT_CAT);
     }
 
+    /** For tests. */
+    void killPlayerForTest() {
+        killPlayer();
+    }
+
     private void killPlayer() {
         dying = true;
         deathTimer = DEATH_TICKS;
@@ -429,6 +492,24 @@ final class GamePanel extends JPanel implements ActionListener {
     void openCageDoor() {
         cageDoorTimer = CAGE_DOOR_TICKS;
         SoundPlayer.play(Sound.CAT_FREE);
+    }
+
+    /** Boss defeat: it shakes and spins, explodes (bonus points!), then Level Clear. */
+    private void updateBossDefeat() {
+        bossDefeatTimer--;
+        if (bossDefeatTimer == BOSS_EXPLODE_AT) {
+            double cx = bossX * TILE + TILE / 2.0, cy = bossY * TILE + TILE / 2.0;
+            effects.burst(Assets.cropToArt(Assets.image("/images/Boss.png"), 0, 100), cx, cy, 84, 1.6);
+            effects.sparks(cx, cy, 60, new java.awt.Color(255, 220, 60), new java.awt.Color(255, 120, 40), java.awt.Color.WHITE);
+            effects.shake(0.9, 10);
+            score += BOSS_BONUS;
+            popups.add(new Popup(bossX, bossY, "BOSS BONUS +" + BOSS_BONUS, 0));
+            SoundPlayer.play(Sound.BOSS_EXPLODE);
+        }
+        if (bossDefeatTimer <= 0) {
+            gameWon = true;
+            SoundPlayer.play(Sound.BOSS_DEFEAT);
+        }
     }
 
     private void updateHudEffects() {

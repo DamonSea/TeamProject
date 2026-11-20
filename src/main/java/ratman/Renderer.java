@@ -58,10 +58,23 @@ final class Renderer {
         this.game = game;
     }
 
+    private long lastFrameNanos;
+
     void draw(Graphics2D g) {
+        // advance particles / shake in real time
+        long now = System.nanoTime();
+        double dt = lastFrameNanos == 0 ? 0 : (now - lastFrameNanos) / 1e9;
+        lastFrameNanos = now;
+        if (!game.paused) game.effects.update(dt);
+
+        // the world shakes; the HUD stays put
+        java.awt.geom.AffineTransform screen = g.getTransform();
+        int[] shake = game.effects.shakeOffset();
+        g.translate(shake[0], shake[1]);
         drawMaze(g);
         drawCheese(g);
         drawCage(g);
+        if (game.isBossLevel()) drawPounceLane(g);
         drawEnemies(g);
 
         if (game.dying) {
@@ -69,7 +82,13 @@ final class Renderer {
         } else {
             drawPlayer(g);
         }
+        game.effects.draw(g);
+        g.setTransform(screen);
         drawHud(g);
+
+        if (game.bossDefeated && !game.gameWon && game.bossDefeatTimer <= GamePanel.BOSS_EXPLODE_AT) {
+            centered(g, "BOSS DEFEATED!", BIG, CHEESE_YELLOW, CY + 10);
+        }
 
         if (game.paused) {
             drawPauseMenu(g);
@@ -77,6 +96,8 @@ final class Renderer {
             drawLevelComplete(g);
         } else if (game.gameOver) {
             drawGameOver(g);
+        } else if (game.waitingToStart && game.bossIntro) {
+            drawBossIntro(g);
         } else if (game.waitingToStart) {
             int y = (Maze.CAGE_Y + 3) * T - 4; // just below the cage
             centered(g, "READY!", READY, CHEESE_YELLOW, y + 4);
@@ -187,13 +208,7 @@ final class Renderer {
     private void drawEnemies(Graphics2D g) {
         int frame = game.animTick % 2;
         if (game.isBossLevel()) {
-            int fw = boss.getHeight();
-            ArtBox box = artBox(boss, fw);
-            int cx = (int) Math.round(game.slide(game.bossPrevX, game.bossX, game.bossMoveTick, 1) * T) + T / 2;
-            int cy = (int) Math.round(game.slide(game.bossPrevY, game.bossY, game.bossMoveTick, 1) * T) + T / 2;
-            int sx = frame * fw + box.x();
-            g.drawImage(boss, cx - BOSS_WIDTH / 2, cy - BOSS_WIDTH / 2, cx + BOSS_WIDTH / 2, cy + BOSS_WIDTH / 2,
-                    sx, box.y(), sx + box.size(), box.y() + box.size(), null);
+            drawBoss(g, frame);
             return;
         }
         for (Cat cat : game.activeCats()) {
@@ -228,6 +243,25 @@ final class Renderer {
     }
 
     private void drawDeath(Graphics2D g) {
+        Skin skin = Skin.selected();
+        if (!skin.hasDeathArt) {
+            // No death frames for this skin: spin and shrink (Pac-Man style), then pop into pixels
+            if (game.deathPopped) return;
+            double p = (GamePanel.DEATH_TICKS - game.deathTimer + game.frameAlpha()) / (GamePanel.DEATH_TICKS * 0.55);
+            p = Math.max(0, Math.min(1, p));
+            BufferedImage sheet = skin.sheet();
+            int fw = sheet.getWidth() / skin.frameCount;
+            ArtBox box = artBox(sheet, fw);
+            java.awt.geom.AffineTransform saved = g.getTransform();
+            g.translate(game.playerX * T + T / 2.0, game.playerY * T + T / 2.0);
+            g.rotate(p * p * 4 * Math.PI);
+            double scale = 1 - 0.85 * p;
+            g.scale(scale, scale);
+            int half = PLAYER_SIZE / 2;
+            g.drawImage(sheet, -half, -half, half, half, box.x(), box.y(), box.x() + box.size(), box.y() + box.size(), null);
+            g.setTransform(saved);
+            return;
+        }
         int fw = death.getWidth() / DEATH_FRAMES;
         int elapsed = GamePanel.DEATH_TICKS - game.deathTimer;
         int phase = Math.min(DEATH_FRAMES - 1, Math.max(0, elapsed * DEATH_FRAMES / GamePanel.DEATH_TICKS));
@@ -292,6 +326,165 @@ final class Renderer {
             int y = Math.max(0, Math.min(h - size, (minY + maxY + 1 - size) / 2));
             return new ArtBox(x, y, Math.min(size, Math.min(frameWidth, h)));
         });
+    }
+
+    // ---- the boss ----
+
+    private final java.util.Map<BufferedImage, BufferedImage> whiteSilhouettes = new java.util.IdentityHashMap<>();
+
+    private BufferedImage whiteSilhouette(BufferedImage sheet) {
+        return whiteSilhouettes.computeIfAbsent(sheet, src -> {
+            BufferedImage out = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < src.getHeight(); y++) {
+                for (int x = 0; x < src.getWidth(); x++) {
+                    int alpha = src.getRGB(x, y) >>> 24;
+                    if (alpha > 0) out.setRGB(x, y, (alpha << 24) | 0xFFFFFF);
+                }
+            }
+            return out;
+        });
+    }
+
+    /** Boss frame centred on (cx, cy), with optional scale, rotation, transparency and white flash. */
+    private void drawBossImage(Graphics2D g, int frame, double cx, double cy, double scale, double angle,
+                               float alpha, float flash) {
+        int fw = boss.getHeight();
+        ArtBox box = artBox(boss, fw);
+        int sx = frame * fw + box.x();
+        java.awt.geom.AffineTransform saved = g.getTransform();
+        java.awt.Composite oldComp = g.getComposite();
+        g.translate(cx, cy);
+        g.rotate(angle);
+        g.scale(scale, scale);
+        int h = BOSS_WIDTH / 2;
+        g.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, Math.max(0, Math.min(1, alpha))));
+        g.drawImage(boss, -h, -h, h, h, sx, box.y(), sx + box.size(), box.y() + box.size(), null);
+        if (flash > 0) {
+            g.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, Math.min(1, flash * alpha)));
+            g.drawImage(whiteSilhouette(boss), -h, -h, h, h, sx, box.y(), sx + box.size(), box.y() + box.size(), null);
+        }
+        g.setComposite(oldComp);
+        g.setTransform(saved);
+    }
+
+    private void drawBoss(Graphics2D g, int frame) {
+        double t = System.nanoTime() / 1e9;
+        double cx = game.slide(game.bossPrevX, game.bossX, game.bossMoveTick, 1) * T + T / 2.0;
+        double cy = game.slide(game.bossPrevY, game.bossY, game.bossMoveTick, 1) * T + T / 2.0;
+
+        // Defeat: shake, flash white and spin faster and faster... then it's gone (the explosion is particles)
+        if (game.bossDefeated) {
+            if (game.bossDefeatTimer <= GamePanel.BOSS_EXPLODE_AT) return;
+            double k = (GamePanel.BOSS_DEFEAT_TICKS - game.bossDefeatTimer + game.frameAlpha())
+                    / (GamePanel.BOSS_DEFEAT_TICKS - GamePanel.BOSS_EXPLODE_AT);
+            k = Math.max(0, Math.min(1, k));
+            double jitter = 4 * k;
+            float flash = ((int) (t * 14) % 2 == 0) ? 0.85f : 0.1f;
+            drawBossImage(g, frame, cx + (Math.random() * 2 - 1) * jitter, cy + (Math.random() * 2 - 1) * jitter,
+                    1 + 0.35 * k, k * k * 6 * Math.PI, 1f, flash);
+            return;
+        }
+
+        // Entrance: hidden during the warning, then rises out of the cage, overshoots and settles
+        if (game.bossIntro) {
+            double p = (GamePanel.BOSS_INTRO_TICKS - game.readyTimer + game.frameAlpha()) / GamePanel.BOSS_INTRO_TICKS;
+            double riseStart = 15.0 / GamePanel.BOSS_INTRO_TICKS;
+            if (p < riseStart) return;
+            double q = Math.min(1, (p - riseStart) / 0.3);
+            double scale = q < 0.75 ? q / 0.75 * 1.25 : 1.25 - (q - 0.75) / 0.25 * 0.25;
+            double rise = (1 - q) * 22;
+            drawBossImage(g, frame, cx, cy + rise, Math.max(0.05, scale), 0, (float) Math.min(1, q * 1.5), 0f);
+            return;
+        }
+
+        switch (game.bossState) {
+            case WINDUP -> {
+                // crouch, shake, and glow red
+                double pulse = 0.5 + 0.5 * Math.sin(t * 30);
+                float r = (float) (48 + 10 * pulse);
+                g.setPaint(new java.awt.RadialGradientPaint((float) cx, (float) cy, r, new float[]{0f, 1f},
+                        new Color[]{new Color(255, 40, 40, (int) (150 + 80 * pulse)), new Color(255, 0, 0, 0)}));
+                g.fill(new java.awt.geom.Ellipse2D.Double(cx - r, cy - r, 2 * r, 2 * r));
+                drawBossImage(g, frame, cx + Math.sin(t * 70) * 2.5, cy + 3, 0.92, 0, 1f, (float) (0.25 * pulse));
+            }
+            case DASH -> {
+                // afterimages trailing behind
+                for (int i = 2; i >= 1; i--) {
+                    drawBossImage(g, frame, cx - game.dashDx * i * 16, cy - game.dashDy * i * 16, 1, 0, 0.35f / i, 0.4f);
+                }
+                drawBossImage(g, frame, cx, cy, 1.05, 0, 1f, 0f);
+            }
+            case DIZZY -> {
+                drawBossImage(g, frame, cx, cy, 1, Math.sin(t * 9) * 0.12, 1f, 0f);
+                double starY = cy - 30 < T + 8 ? cy + 30 : cy - 30; // below it if the HUD bar would hide them
+                for (int i = 0; i < 3; i++) {              // stars circling its heads
+                    double a = t * 6 + i * 2 * Math.PI / 3;
+                    drawStar(g, cx + Math.cos(a) * 26, starY + Math.sin(a) * 7, 6);
+                }
+            }
+            default -> drawBossImage(g, frame, cx, cy, 1, 0, 1f, 0f);
+        }
+    }
+
+    private static void drawStar(Graphics2D g, double x, double y, double r) {
+        java.awt.geom.Path2D.Double star = new java.awt.geom.Path2D.Double();
+        for (int i = 0; i < 10; i++) {
+            double rad = i % 2 == 0 ? r : r * 0.45, a = -Math.PI / 2 + i * Math.PI / 5;
+            if (i == 0) star.moveTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+            else star.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+        }
+        star.closePath();
+        g.setColor(new Color(255, 230, 60));
+        g.fill(star);
+        g.setColor(OUTLINE);
+        g.draw(star);
+    }
+
+    /** While the boss winds up, the lane it's about to pounce down flashes red. */
+    private void drawPounceLane(Graphics2D g) {
+        if (game.bossState != GamePanel.BossState.WINDUP || game.bossDefeated) return;
+        double pulse = 0.5 + 0.5 * Math.sin(System.nanoTime() / 1e9 * 20);
+        g.setColor(new Color(255, 40, 40, (int) (50 + 70 * pulse)));
+        int x = game.bossX + game.dashDx, y = game.bossY + game.dashDy;
+        for (int i = 0; i < CatAI.POUNCE_MAX && game.maze.isOpen(x, y) && !Maze.inCage(x, y); i++) {
+            g.fillRect(x * T + 3, y * T + 3, T - 6, T - 6);
+            x += game.dashDx;
+            y += game.dashDy;
+        }
+    }
+
+    /** WARNING siren, then the title card while the boss rises out of the cage. */
+    private void drawBossIntro(Graphics2D g) {
+        double t = System.nanoTime() / 1e9;
+        double p = (GamePanel.BOSS_INTRO_TICKS - game.readyTimer + game.frameAlpha()) / GamePanel.BOSS_INTRO_TICKS;
+        int w = GamePanel.WIDTH;
+        if (p < 0.36) {
+            g.setColor(new Color(0, 0, 0, 150));
+            g.fillRect(0, 0, w, GamePanel.HEIGHT);
+            for (int band : new int[]{CY - 95, CY + 45}) {         // scrolling hazard stripes
+                g.setColor(new Color(170, 0, 0));
+                g.fillRect(0, band, w, 30);
+                g.setColor(new Color(255, 200, 0));
+                int offset = (int) (t * 80) % 40;
+                for (int x = -40 + offset; x < w + 40; x += 40) {
+                    g.fillPolygon(new int[]{x, x + 18, x + 8, x - 10}, new int[]{band, band, band + 30, band + 30}, 4);
+                }
+            }
+            if (Math.sin(t * 2 * Math.PI * 2.5) > -0.2) {
+                centered(g, "WARNING", BIG, new Color(255, 60, 60), CY + 14);
+            }
+            centered(g, "Something big is coming...", SMALL, Color.WHITE, CY + 100);
+            return;
+        }
+        if (p >= 0.6) {
+            int y = (Maze.CAGE_Y + 3) * T - 6;
+            centered(g, "THE THREE-HEADED CAT", READY, new Color(255, 80, 80), y + 4);
+            if (p >= 0.82) {
+                centered(g, "READY!", HUD, CHEESE_YELLOW, y + 32);
+            } else {
+                centered(g, "Level " + game.level + "  -  " + game.maze.name(), SMALL, Color.WHITE, y + 28);
+            }
+        }
     }
 
     private BufferedImage silhouette(BufferedImage sheet) {

@@ -355,6 +355,93 @@ def cat_free():  # a cat leaves the cage
     return sweep(500, 260, 0.12, shape="triangle", release=0.04) * 0.6
 
 
+# --------------------------------------------------------------------------- boss + effects
+
+def lowpass(x, cutoff):
+    """Cheap one-pole low-pass filter."""
+    a = np.exp(-2 * np.pi * cutoff / SR)
+    y = np.zeros_like(x)
+    acc = 0.0
+    for i, v in enumerate(x):
+        acc = (1 - a) * v + a * acc
+        y[i] = acc
+    return y
+
+
+def pop():
+    """Skins without death art spin, shrink and pop into pixels."""
+    burst = noise(0.25, decay=0.05) * 0.7
+    blip = sweep(900, 1600, 0.06, duty=0.25, release=0.02)
+    out = np.zeros(int(0.3 * SR))
+    add(out, blip, 0)
+    add(out, burst, int(0.03 * SR))
+    for k, f in enumerate([1800, 1400, 2200]):
+        add(out, tone(f, 0.04, duty=0.25, release=0.02) * 0.3, int((0.08 + k * 0.05) * SR))
+    return out
+
+
+def boss_warning():
+    """Two-tone siren, three times."""
+    parts = []
+    for _ in range(3):
+        parts.append(sweep(560, 760, 0.28, duty=0.5, release=0.02))
+        parts.append(sweep(760, 560, 0.28, duty=0.5, release=0.02))
+    return seq(parts) * 0.7
+
+
+def boss_roar():
+    """Three growling voices (three heads!) sliding down, plus a noisy rumble."""
+    dur = 1.3
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for base, wob in [(170, 7.0), (130, 5.5), (95, 8.5)]:
+        f = base * (1.25 - 0.45 * t / dur) * (1 + 0.04 * np.sin(2 * np.pi * wob * t))
+        phase = np.cumsum(f) / SR
+        out += (np.where(phase % 1.0 < 0.3, 1.0, -1.0) - (2 * 0.3 - 1)) * 0.3
+    out += lowpass(rng.uniform(-1, 1, n), 900) * 1.6
+    env = np.minimum(1, t / 0.08) * np.exp(-np.maximum(0, t - 0.5) / 0.35)
+    return out * env
+
+
+def boss_windup():
+    return sweep(180, 900, 0.75, duty=0.25, curve=1.6, release=0.03) * 0.55 + \
+        sweep(182, 905, 0.75, duty=0.5, curve=1.6, release=0.03) * 0.25
+
+
+def boss_dash():
+    n = int(0.4 * SR)
+    t = np.arange(n) / SR
+    whoosh = lowpass(rng.uniform(-1, 1, n), 2500) * np.sin(np.pi * t / 0.4) * 1.5
+    return whoosh + sweep(700, 250, 0.4, duty=0.5, release=0.05) * 0.25
+
+
+def boss_thud():
+    out = np.zeros(int(0.5 * SR))
+    add(out, kick() * 1.2, 0)
+    add(out, noise(0.2, decay=0.04) * 0.5, 0)
+    for k in range(3):  # little "birdie" tweets for the dizzy stars
+        add(out, tone(freq("E7"), 0.05, duty=0.25, release=0.02) * 0.25, int((0.18 + k * 0.08) * SR))
+    return out
+
+
+def boss_explode():
+    n = int(1.6 * SR)
+    t = np.arange(n) / SR
+    rumble = lowpass(rng.uniform(-1, 1, n), 700) * 3.0 * np.exp(-t / 0.5)
+    crack = noise(0.4, decay=0.08)
+    out = rumble.copy()
+    add(out, crack, 0)
+    add(out, sweep(400, 40, 0.9, duty=0.5, release=0.1) * 0.5, 0)
+    add(out, kick() * 1.5, 0)
+    return out
+
+
+def boss_defeat_jingle():
+    lead = "G5:.25 B5:.25 D6:.25 G6:.75 F#6:.25 G6:.25 A6:.25 B6:2"
+    return jingle(150, lead, chords_at=[(2.25, ["G3", "D4", "B4", "G5"], 2.5)], lead_duty=0.25, tail=0.6)
+
+
 if __name__ == "__main__":
     print("Writing to", os.path.abspath(OUT))
     save("music_menu.wav", menu_theme(), peak=0.8)
@@ -371,3 +458,11 @@ if __name__ == "__main__":
     save("sfx_pause.wav", pause_blip(), peak=0.6)
     save("sfx_click.wav", menu_click(), peak=0.6)
     save("sfx_cat_free.wav", cat_free(), peak=0.5)
+    save("sfx_pop.wav", pop(), peak=0.75)
+    save("sfx_boss_warning.wav", boss_warning(), peak=0.6)
+    save("sfx_boss_roar.wav", boss_roar(), peak=0.85)
+    save("sfx_boss_windup.wav", boss_windup(), peak=0.6)
+    save("sfx_boss_dash.wav", boss_dash(), peak=0.7)
+    save("sfx_boss_thud.wav", boss_thud(), peak=0.75)
+    save("sfx_boss_explode.wav", boss_explode(), peak=0.9)
+    save("jingle_boss_defeat.wav", boss_defeat_jingle())

@@ -4,17 +4,20 @@ import java.awt.image.BufferedImage;
 
 /** Playable character skins. Each sprite sheet is one row of square animation frames. */
 public enum Skin {
-    RAT("Rat", "Rat.png", 4),
-    SQUIRREL("Squirrel", "Squirrel.png", 4),
-    JOE_OAKES("Joe Oakes", "Joe_Oakes.png", 7);
+    RAT("Rat", "Rat.png", 4, true),
+    SQUIRREL("Squirrel", "Squirrel.png", 4, false),
+    JOE_OAKES("Joe Oakes", "Joe_Oakes.png", 7, false);
 
     private static Skin selected = RAT;
 
     public final String displayName;
     public final int frameCount;
+    /** Only the rat has drawn death frames; the others spin, shrink and pop instead. */
+    public final boolean hasDeathArt;
     private final String path;
 
-    Skin(String displayName, String file, int frameCount) {
+    Skin(String displayName, String file, int frameCount, boolean hasDeathArt) {
+        this.hasDeathArt = hasDeathArt;
         this.displayName = displayName;
         this.path = "/images/" + file;
         this.frameCount = frameCount;

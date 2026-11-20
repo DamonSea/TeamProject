@@ -49,7 +49,8 @@ New to the game? **HOW TO PLAY** on the main menu explains the basics and introd
 
 - Four hand-designed mazes: **Classic, Courtyard, Labyrinth, Boss Arena**. They repeat after level 4.
 - Levels cycle through three themes: **Outdoor → Classroom → Planets**
-- Levels 1–3 have 1–3 cats; level 4 is the **boss** (fast and can't be eaten); then the cycle repeats
+- Levels 1–3 have 1–3 cats; level 4 is the **boss**, the Three-Headed Cat: fast, can't be eaten, and it
+  **pounces** down corridors when it lines up with you (watch for the red lane). Then the cycle repeats.
 - The cats hunt like Pac-Man's ghosts, each in its own way:
   - **Alpha, the Chaser (orange eyes):** the confident, reserved leader; follows the shortest path straight to you
   - **Explorer, the Ambusher (yellow eyes):** the smallest and scrappiest; aims 4 tiles ahead of where you're heading
