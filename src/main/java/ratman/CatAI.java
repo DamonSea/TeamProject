@@ -142,18 +142,94 @@ final class CatAI {
         };
     }
 
-    /** The boss chases every tick and can't be eaten. */
+    // ---- the boss ----
+
+    static final int POUNCE_WINDUP = 8;      // ticks crouched, glowing red, before it dashes
+    static final int POUNCE_SPEED = 2;       // tiles per tick while dashing (the player does 1)
+    static final int POUNCE_MAX = 12;        // longest dash
+    static final int DIZZY_TICKS = 12;       // stunned after slamming into a wall
+    private static final int POUNCE_MIN_RANGE = 3, POUNCE_MAX_RANGE = 10;
+
+    /**
+     * The boss chases every tick and can't be eaten. When it lines up with the player down a
+     * clear corridor it winds up, then POUNCES at double speed until it hits a wall (and gets dizzy).
+     */
     static void moveBoss(GamePanel game) {
-        boolean inCage = Maze.inCage(game.bossX, game.bossY);
-        int[] dir = chooseDirection(game.maze, game.bossX, game.bossY, game.bossDirX, game.bossDirY,
-                game.playerX, game.playerY, false, inCage);
         game.bossPrevX = game.bossX;
         game.bossPrevY = game.bossY;
         game.bossMoveTick = game.tickCount;
-        game.bossX += dir[0];
-        game.bossY += dir[1];
-        game.bossDirX = dir[0];
-        game.bossDirY = dir[1];
+
+        switch (game.bossState) {
+            case WINDUP -> {
+                if (--game.bossStateTimer <= 0) {
+                    game.bossState = GamePanel.BossState.DASH;
+                    game.dashTravelled = 0;
+                    SoundPlayer.play(SoundPlayer.Sound.BOSS_DASH);
+                }
+            }
+            case DASH -> dash(game);
+            case DIZZY -> {
+                if (--game.bossStateTimer <= 0) {
+                    game.bossState = GamePanel.BossState.CHASE;
+                    game.bossCooldown = 60 + java.util.concurrent.ThreadLocalRandom.current().nextInt(50);
+                }
+            }
+            case CHASE -> {
+                boolean inCage = Maze.inCage(game.bossX, game.bossY);
+                if (game.bossCooldown > 0) {
+                    game.bossCooldown--;
+                } else if (!inCage && lineUpForPounce(game)) {
+                    game.bossState = GamePanel.BossState.WINDUP;
+                    game.bossStateTimer = POUNCE_WINDUP;
+                    SoundPlayer.play(SoundPlayer.Sound.BOSS_WINDUP);
+                    return;
+                }
+                int[] dir = chooseDirection(game.maze, game.bossX, game.bossY, game.bossDirX, game.bossDirY,
+                        game.playerX, game.playerY, false, inCage);
+                game.bossX += dir[0];
+                game.bossY += dir[1];
+                game.bossDirX = dir[0];
+                game.bossDirY = dir[1];
+            }
+        }
+    }
+
+    /** True (and sets the dash direction) if the player is straight ahead down a clear corridor. */
+    private static boolean lineUpForPounce(GamePanel game) {
+        int dx = Integer.signum(game.playerX - game.bossX), dy = Integer.signum(game.playerY - game.bossY);
+        if (dx != 0 && dy != 0) return false;            // not in the same row or column
+        int dist = Math.abs(game.playerX - game.bossX) + Math.abs(game.playerY - game.bossY);
+        if (dist < POUNCE_MIN_RANGE || dist > POUNCE_MAX_RANGE) return false;
+        for (int i = 1; i <= dist; i++) {
+            if (!passable(game.maze, game.bossX + dx * i, game.bossY + dy * i, false)) return false;
+        }
+        game.dashDx = dx;
+        game.dashDy = dy;
+        return true;
+    }
+
+    private static void dash(GamePanel game) {
+        for (int i = 0; i < POUNCE_SPEED; i++) {
+            int nx = game.bossX + game.dashDx, ny = game.bossY + game.dashDy;
+            if (!passable(game.maze, nx, ny, false)) {
+                // SLAM into the wall: dizzy for a moment
+                game.bossState = GamePanel.BossState.DIZZY;
+                game.bossStateTimer = DIZZY_TICKS;
+                game.effects.shake(0.35, 5);
+                SoundPlayer.play(SoundPlayer.Sound.BOSS_THUD);
+                return;
+            }
+            game.bossX = nx;
+            game.bossY = ny;
+            game.bossDirX = game.dashDx;
+            game.bossDirY = game.dashDy;
+            if (game.bossX == game.playerX && game.bossY == game.playerY) return; // got you
+            if (++game.dashTravelled >= POUNCE_MAX) {
+                game.bossState = GamePanel.BossState.CHASE;
+                game.bossCooldown = 60;
+                return;
+            }
+        }
     }
 
     private static Point toward(Maze maze, Cat cat, int tx, int ty, boolean flee, boolean allowCage) {

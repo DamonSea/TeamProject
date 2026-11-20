@@ -84,8 +84,9 @@ final class HowToPlayMenu extends JPanel {
                         "Run off the left or right edge of the maze to pop out on the other side. The cats "
                                 + "can't follow you through."),
                 new Entry(crop(Assets.image("/images/Boss.png"), 0, 100), "Every 4th level: the boss", new Color(255, 120, 120),
-                        "The Three-Headed Cat is as fast as you and can't be eaten, even with cheese. "
-                                + "Keep moving, use the loops, and clear the dots.")
+                        "The Three-Headed Cat is as fast as you and can't be eaten. Watch for its POUNCE: "
+                                + "when it lines up with you it glows red and the lane lights up, then it dashes at "
+                                + "double speed. Step out of the lane! If it hits a wall, it's dizzy for a moment.")
         ));
 
         pages.add(List.of(
@@ -123,22 +124,8 @@ final class HowToPlayMenu extends JPanel {
         ));
     }
 
-    /** Frame number {@code frameIndex} of a sheet with {@code frameW}-px frames, cropped square to its drawing. */
     private static BufferedImage crop(BufferedImage sheet, int frameIndex, int frameW) {
-        BufferedImage f = sheet.getSubimage(frameIndex * frameW, 0, frameW, Math.min(frameW, sheet.getHeight()));
-        int minX = f.getWidth(), minY = f.getHeight(), maxX = -1, maxY = -1;
-        for (int y = 0; y < f.getHeight(); y++) {
-            for (int x = 0; x < f.getWidth(); x++) {
-                if ((f.getRGB(x, y) >>> 24) == 0) continue;
-                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-            }
-        }
-        if (maxX < 0) return f;
-        int w = maxX - minX + 1, h = maxY - minY + 1, size = Math.max(w, h);
-        BufferedImage out = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        out.createGraphics().drawImage(f.getSubimage(minX, minY, w, h), (size - w) / 2, (size - h) / 2, null);
-        return out;
+        return Assets.cropToArt(sheet, frameIndex, frameW);
     }
 
     @Override

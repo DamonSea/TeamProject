@@ -35,16 +35,25 @@ final class ControllerInput {
 
     static ControllerInput detect() {
         JINPUT_LOG.setLevel(java.util.logging.Level.OFF);
+        Controller[] controllers = new Controller[0];
+        // JInput also calls printStackTrace() directly when a platform plugin can't load
+        // (e.g. on Apple Silicon Macs). Mute stderr just while it scans for controllers.
+        java.io.PrintStream realErr = System.err;
         try {
-            for (Controller c : ControllerEnvironment.getDefaultEnvironment().getControllers()) {
-                if (c.getType() == Controller.Type.GAMEPAD) {
-                    System.out.println("Controller found: " + c.getName());
-                    return new ControllerInput(c);
-                }
-            }
+            System.setErr(new java.io.PrintStream(java.io.OutputStream.nullOutputStream()));
+            controllers = ControllerEnvironment.getDefaultEnvironment().getControllers();
         } catch (Throwable t) {
             // UnsatisfiedLinkError (natives missing), NoClassDefFoundError, etc.
+            System.setErr(realErr);
             System.err.println("Controller support unavailable: " + t);
+        } finally {
+            System.setErr(realErr);
+        }
+        for (Controller c : controllers) {
+            if (c.getType() == Controller.Type.GAMEPAD) {
+                System.out.println("Controller found: " + c.getName());
+                return new ControllerInput(c);
+            }
         }
         System.out.println("No controller found. Running keyboard-only mode.");
         return new ControllerInput(null);
