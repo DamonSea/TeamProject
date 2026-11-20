@@ -26,7 +26,7 @@ final class HowToPlayMenu extends JPanel {
     private record Entry(BufferedImage icon, String heading, Color headingColor, String text) {}
 
     private final List<List<Entry>> pages = new ArrayList<>();
-    private final String[] pageTitles = {"The Basics", "Meet the Cats"};
+    private final String[] pageTitles = {"The Basics", "Meet the Cats", "Cat Tactics"};
     private int page;
     private final UiStyle.RetroButton prev;
     private final UiStyle.RetroButton next;
@@ -89,22 +89,37 @@ final class HowToPlayMenu extends JPanel {
         ));
 
         pages.add(List.of(
-                new Entry(crop(cats, 0, 30), "The Chaser  (orange eyes)", new Color(255, 160, 60),
-                        "Locks on and takes the shortest path straight to you, around every corner. "
-                                + "It never gets lost. It's the only cat on level 1."),
-                new Entry(crop(cats, 2, 30), "The Ambusher  (yellow eyes)", new Color(255, 225, 70),
-                        "Aims 4 tiles ahead of where you're running, to cut you off. Joins on level 2. "
-                                + "Turn around or change direction to throw it off."),
-                new Entry(crop(cats, 4, 30), "The Flanker  (green eyes)", new Color(130, 230, 110),
-                        "Works with the Chaser: it heads for the spot on the opposite side of you, "
-                                + "to box you in. Joins on level 3. Don't get caught between them!"),
+                new Entry(crop(cats, 0, 30), "Alpha, the Chaser  (orange eyes)", new Color(255, 160, 60),
+                        "The leader of the pack. Confident and reserved, Alpha never wastes a move: he locks on "
+                                + "and takes the shortest path straight to you, around every corner, and he never "
+                                + "gets lost. He hunts alone on level 1, and the others follow his lead."),
+                new Entry(crop(cats, 2, 30), "Explorer, the Ambusher  (yellow eyes)", new Color(255, 225, 70),
+                        "The smallest and scrappiest of the three. Explorer doesn't bother following you: "
+                                + "Explorer dashes 4 tiles ahead of where you're running and cuts you off. Joins on "
+                                + "level 2. Turn around or change direction to throw this one off."),
+                new Entry(crop(cats, 4, 30), "Yoda, the Flanker  (green eyes)", new Color(130, 230, 110),
+                        "The oldest and wisest. Patient and calm, Yoda never rushes in. He watches where Alpha "
+                                + "is and quietly slips around to your other side to box you in. Joins on level 3. "
+                                + "Don't get caught between them!")
+        ));
+
+        pages.add(List.of(
                 new Entry(null, "Scatter and chase", yellow,
                         "Every so often the cats give up and scatter to their own corners for a few seconds. "
                                 + "Use the break to grab dots. When they all turn around at once, they're coming back. "
                                 + "Up close, every cat goes straight for you."),
                 new Entry(null, "They get faster", yellow,
                         "Cats start at half your speed and speed up every level. Scared cats are slower; "
-                                + "the eyes of an eaten cat rush home.")
+                                + "the eyes of an eaten cat rush home."),
+                new Entry(crop(cats, 0, 30), "Beating Alpha", new Color(255, 160, 60),
+                        "Alpha always comes the shortest way, so you know where he'll be. Lead him around a "
+                                + "loop of walls and he'll follow you all the way round."),
+                new Entry(crop(cats, 2, 30), "Beating Explorer", new Color(255, 225, 70),
+                        "Explorer aims where you're going, not where you are. Head toward Explorer, then "
+                                + "double back at the last second."),
+                new Entry(crop(cats, 4, 30), "Beating Yoda", new Color(130, 230, 110),
+                        "Yoda's plan needs Alpha. Use a side tunnel to put the whole maze between you and "
+                                + "Alpha, and Yoda's trap falls apart.")
         ));
     }
 

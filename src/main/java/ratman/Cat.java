@@ -4,12 +4,21 @@ package ratman;
 final class Cat {
     /** Each cat hunts differently, like the ghosts in Pac-Man. */
     enum Personality {
-        /** Orange eyes: follows the shortest path straight to the player. */
-        CHASER,
-        /** Yellow eyes: aims a few tiles ahead of where the player is heading, to cut them off. */
-        AMBUSHER,
-        /** Green eyes: aims opposite the Chaser around the player, to box them in. */
-        FLANKER
+        /** Alpha (orange eyes): follows the shortest path straight to the player. */
+        CHASER("Alpha", "the Chaser"),
+        /** Explorer (yellow eyes): aims a few tiles ahead of where the player is heading, to cut them off. */
+        AMBUSHER("Explorer", "the Ambusher"),
+        /** Yoda (green eyes): aims opposite the Chaser around the player, to box them in. */
+        FLANKER("Yoda", "the Flanker");
+
+        /** The names the original team gave the cats. */
+        final String catName;
+        final String title;
+
+        Personality(String catName, String title) {
+            this.catName = catName;
+            this.title = title;
+        }
     }
 
     final int index;      // 0..2, also selects the sprite colour
