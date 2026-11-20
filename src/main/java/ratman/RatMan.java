@@ -34,6 +34,11 @@ public final class RatMan {
         SoundPlayer.playMusic(SoundPlayer.Track.MENU);
     }
 
+    static void showHowToPlay() {
+        show(new HowToPlayMenu());
+        SoundPlayer.playMusic(SoundPlayer.Track.MENU);
+    }
+
     static void showSettings() {
         show(new SettingsMenu());
         SoundPlayer.playMusic(SoundPlayer.Track.MENU);

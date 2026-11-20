@@ -60,6 +60,7 @@ final class Renderer {
 
     void draw(Graphics2D g) {
         drawMaze(g);
+        drawCheese(g);
         drawCage(g);
         drawEnemies(g);
 
@@ -88,8 +89,6 @@ final class Renderer {
     private void drawMaze(Graphics2D g) {
         Maze maze = game.maze;
         BufferedImage tiles = game.theme.tileSheet();
-        int pelletSize = (int) (T * 0.8);
-        int pelletOffset = (T - pelletSize) / 2;
 
         for (int y = 0; y < Maze.ROWS; y++) {
             for (int x = 0; x < Maze.COLS; x++) {
@@ -101,11 +100,65 @@ final class Renderer {
                     g.setColor(Color.WHITE);
                     g.fillOval(px + T / 3, py + T / 3, T / 3, T / 3);
                 }
-                if (maze.hasPellet(x, y)) {
-                    g.drawImage(cheese, px + pelletOffset, py + pelletOffset, pelletSize, pelletSize, null);
+            }
+        }
+    }
+
+    private static final int CHEESE_SIZE = 34;
+    private static final Color GLOW = new Color(255, 215, 70);
+
+    /**
+     * The big cheeses: drawn larger than a tile, bobbing up and down over a shadow, with a pulsing
+     * golden glow and the odd sparkle. Animated in real time so it's smooth at 60 fps.
+     */
+    private void drawCheese(Graphics2D g) {
+        Maze maze = game.maze;
+        double t = System.nanoTime() / 1e9;
+        ArtBox box = artBox(cheese, cheese.getWidth());
+        java.awt.RenderingHints oldHints = g.getRenderingHints();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        for (int y = 0; y < Maze.ROWS; y++) {
+            for (int x = 0; x < Maze.COLS; x++) {
+                if (!maze.hasPellet(x, y)) continue;
+                double offset = (x * 7 + y * 13) * 0.37;           // so the cheeses don't move in lockstep
+                double pulse = 0.5 + 0.5 * Math.sin(t * 2 * Math.PI * 1.1 + offset);
+                double bob = Math.sin(t * 2 * Math.PI * 0.8 + offset) * 3.5;
+                int cx = x * T + T / 2;
+                int cy = (int) Math.round(y * T + T / 2 - 3 + bob);
+
+                // glow
+                float r = (float) (30 + 9 * pulse);
+                int a = (int) (170 + 85 * pulse);
+                g.setPaint(new java.awt.RadialGradientPaint(cx, cy, r, new float[]{0f, 0.5f, 1f},
+                        new Color[]{new Color(255, 250, 190, a), new Color(GLOW.getRed(), GLOW.getGreen(), GLOW.getBlue(), (int) (a * 0.6)),
+                                new Color(GLOW.getRed(), GLOW.getGreen(), GLOW.getBlue(), 0)}));
+                g.fill(new java.awt.geom.Ellipse2D.Float(cx - r, cy - r, 2 * r, 2 * r));
+
+                // shadow on the floor shrinks as the cheese floats up
+                int shadowW = (int) (20 - bob * 1.2);
+                g.setColor(new Color(0, 0, 0, 80));
+                g.fillOval(cx - shadowW / 2, y * T + T - 6, shadowW, 5);
+
+                // the cheese itself, gently breathing in size
+                int size = (int) Math.round(CHEESE_SIZE + 3 * pulse);
+                int sx = box.x(), sy = box.y();
+                g.drawImage(cheese, cx - size / 2, cy - size / 2, cx + size / 2, cy + size / 2,
+                        sx, sy, sx + box.size(), sy + box.size(), null);
+
+                // a little four-point sparkle that blinks on now and then
+                double sparkle = Math.sin(t * 2 * Math.PI * 0.6 + offset * 2.3);
+                if (sparkle > 0.85) {
+                    float k = (float) ((sparkle - 0.85) / 0.15);
+                    int spx = cx + 10, spy = cy - 11, len = (int) (3 + 5 * k);
+                    g.setColor(new Color(255, 255, 255, (int) (255 * k)));
+                    g.setStroke(new java.awt.BasicStroke(2f));
+                    g.drawLine(spx - len, spy, spx + len, spy);
+                    g.drawLine(spx, spy - len, spx, spy + len);
+                    g.setStroke(new java.awt.BasicStroke(1f));
                 }
             }
         }
+        g.setRenderingHints(oldHints);
     }
 
     private static final Color CAGE_FLOOR = new Color(125, 105, 80);
