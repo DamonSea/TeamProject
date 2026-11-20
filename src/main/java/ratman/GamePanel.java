@@ -402,7 +402,7 @@ final class GamePanel extends JPanel implements ActionListener {
         cat.frightened = false;
         cat.respawnTimer = 0;
         score += CAT_POINTS;
-        popups.add(new Popup(cat.x, cat.y, "+" + CAT_POINTS, 0));
+        popups.add(new Popup(cat.x, cat.y, cat.personality.catName.toUpperCase() + " +" + CAT_POINTS, 0));
         SoundPlayer.play(Sound.EAT_CAT);
     }
 

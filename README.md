@@ -36,9 +36,9 @@ New to the game? **HOW TO PLAY** on the main menu explains the basics and introd
 - Levels cycle through three themes: **Outdoor → Classroom → Planets**
 - Levels 1–3 have 1–3 cats; level 4 is the **boss** (fast and can't be eaten); then the cycle repeats
 - The cats hunt like Pac-Man's ghosts, each in its own way:
-  - **Orange eyes – the Chaser:** follows the shortest path straight to you
-  - **Yellow eyes – the Ambusher:** aims 4 tiles ahead of where you're heading
-  - **Green eyes – the Flanker:** works with the Chaser to box you in from the other side
+  - **Alpha, the Chaser (orange eyes):** the confident, reserved leader; follows the shortest path straight to you
+  - **Explorer, the Ambusher (yellow eyes):** the smallest and scrappiest; aims 4 tiles ahead of where you're heading
+  - **Yoda, the Flanker (green eyes):** the patient old soul; works with Alpha to box you in from the other side
 - Cats alternate between short **scatter** waves (each runs to its own corner) and **chase** waves.
   They turn around when the wave changes. They start at half your speed and get faster each level (up to 80%).
 - Prefer chaos? **Settings → Mazes: Random** generates a new maze every level (Settings also has Music and Sound FX toggles)
