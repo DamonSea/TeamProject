@@ -34,6 +34,7 @@ final class Menu extends JPanel {
         b.setFocusable(false);
         b.setBackground(BUTTON_BLUE);
         b.setForeground(Color.WHITE);
+        b.setOpaque(true);
         b.addActionListener(e -> action.run());
         return b;
     }

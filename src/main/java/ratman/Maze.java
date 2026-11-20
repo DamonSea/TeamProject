@@ -14,6 +14,10 @@ public final class Maze {
     public static final int CAGE_X = 10;
     public static final int CAGE_Y = 10;
 
+    /** Where the player starts each life. */
+    public static final int START_X = 1;
+    public static final int START_Y = 1;
+
     /** Rows with a wrap-around tunnel on the left/right edge. */
     private static final int[] TUNNEL_ROWS = {9, 10};
 
@@ -29,6 +33,7 @@ public final class Maze {
         Maze m = new Maze();
         m.carve(random);
         m.buildCage();
+        m.removeUnreachableDots();
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
                 m.tileVariant[r][c] = theme.pickVariant(random.nextDouble());
@@ -104,6 +109,37 @@ public final class Maze {
         walls[CAGE_Y - 1][CAGE_X] = false;
     }
 
+    /**
+     * Occasionally the random rooms and the cage wall off a pocket of dots the player can't get to,
+     * which made about 1 in 250 levels impossible to finish. Flood-fill from the start and
+     * drop any dot or pellet the player can't reach.
+     */
+    private void removeUnreachableDots() {
+        boolean[][] reached = new boolean[ROWS][COLS];
+        java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
+        reached[START_Y][START_X] = true;
+        queue.add(new int[]{START_X, START_Y});
+        int[][] steps = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!queue.isEmpty()) {
+            int[] p = queue.poll();
+            for (int[] d : steps) {
+                int nx = Math.floorMod(p[0] + d[0], COLS), ny = p[1] + d[1];
+                if (isWalkable(nx, ny) && !reached[ny][nx]) {
+                    reached[ny][nx] = true;
+                    queue.add(new int[]{nx, ny});
+                }
+            }
+        }
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                if (!reached[r][c]) {
+                    dots[r][c] = false;
+                    pellets[r][c] = false;
+                }
+            }
+        }
+    }
+
     private void open(int r, int c) {
         walls[r][c] = false;
         dots[r][c] = true;
@@ -121,6 +157,11 @@ public final class Maze {
 
     public boolean isOpen(int x, int y) {
         return inBounds(x, y) && !walls[y][x];
+    }
+
+    /** Tiles the player may stand on: open and not inside the cats' cage. */
+    public boolean isWalkable(int x, int y) {
+        return isOpen(x, y) && !inCage(x, y);
     }
 
     public boolean isWall(int x, int y) {

@@ -14,12 +14,12 @@ public final class RatMan {
 
     public static void main(String[] args) {
         configureControllerNatives();
+        useSameLookOnEveryOs();
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Rat-Man");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setResizable(false);
             showMenu();
-            frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
     }
@@ -45,8 +45,22 @@ public final class RatMan {
         }
         frame.setContentPane(panel);
         frame.pack(); // size the window to the panel, so nothing is cut off by the title bar
+        frame.setLocationRelativeTo(null); // re-centre, since the game screen is bigger than the menu
         frame.revalidate();
         frame.repaint();
+    }
+
+    /**
+     * On macOS, Java's default button style ignores custom background colours, so the menu's
+     * white button text was drawn on white buttons (blank START/SKINS). Using Java's own
+     * cross-platform style makes the menus look the same on Mac and Windows.
+     */
+    private static void useSameLookOnEveryOs() {
+        try {
+            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception e) {
+            System.err.println("Could not set look and feel: " + e.getMessage());
+        }
     }
 
     /**

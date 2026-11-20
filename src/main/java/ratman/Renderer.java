@@ -46,7 +46,9 @@ final class Renderer {
         }
         drawHud(g);
 
-        if (game.gameWon) {
+        if (game.paused) {
+            drawPauseMenu(g);
+        } else if (game.gameWon) {
             drawLevelComplete(g);
         } else if (game.gameOver) {
             drawGameOver(g);
@@ -80,10 +82,16 @@ final class Renderer {
         }
     }
 
+    private static final Color CAGE_FLOOR = new Color(125, 105, 80);
+
     private void drawCage(Graphics2D g) {
         int fw = cage.getWidth() / 2;
         int sx = game.cageDoorTimer > 0 ? fw : 0;
         int cx = (Maze.CAGE_X - 1) * T, cy = (Maze.CAGE_Y - 1) * T;
+        // Solid floor behind the bars so the level's wall tiles don't show through them.
+        // In Cage.png the bars cover x 1-28, y 10-25 of each 30x30 frame (scaled x3 here).
+        g.setColor(CAGE_FLOOR);
+        g.fillRect(cx + 3, cy + 30, 84, 48);
         g.drawImage(cage, cx, cy, cx + 3 * T, cy + 3 * T, sx, 0, sx + fw, cage.getHeight(), null);
     }
 
@@ -97,7 +105,7 @@ final class Renderer {
         for (Cat cat : game.activeCats()) {
             if (cat.eyes) {
                 drawFrame(g, catEyes, frame, catEyes.getHeight(), cat.x, cat.y);
-            } else if (game.poweredUp) {
+            } else if (cat.frightened && !flashWarning()) {
                 drawFrame(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cat.x, cat.y);
             } else {
                 drawFrame(g, cats, cat.index * 2 + frame, cats.getHeight(), cat.x, cat.y);
@@ -105,18 +113,23 @@ final class Renderer {
         }
     }
 
+    /** In the last second of a power-up, scared cats flash back to normal as a warning. */
+    private boolean flashWarning() {
+        return game.powerTimer <= 10 && (game.powerTimer / 2) % 2 == 0;
+    }
+
     private void drawPlayer(Graphics2D g) {
         Skin skin = Skin.selected();
         BufferedImage sheet = skin.sheet();
         int fw = sheet.getWidth() / skin.frameCount;
-        drawFrame(g, sheet, game.animTick % skin.frameCount, fw, game.playerX, game.playerY);
+        drawFacing(g, sheet, game.animTick % skin.frameCount, fw);
     }
 
     private void drawDeath(Graphics2D g) {
         int fw = death.getWidth() / DEATH_FRAMES;
         int elapsed = GamePanel.DEATH_TICKS - game.deathTimer;
         int phase = Math.min(DEATH_FRAMES - 1, Math.max(0, elapsed * DEATH_FRAMES / GamePanel.DEATH_TICKS));
-        drawFrame(g, death, phase, fw, game.playerX, game.playerY);
+        drawFacing(g, death, phase, fw);
     }
 
     /** Draws frame {@code index} (each {@code frameWidth} px wide) of a sheet, scaled into tile (x, y). */
@@ -126,12 +139,45 @@ final class Renderer {
         g.drawImage(sheet, px, py, px + T, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
     }
 
+    /**
+     * Draws a player frame turned to face the direction of travel. Sprites face right,
+     * so left is a mirror image and up/down are 90-degree rotations.
+     */
+    private void drawFacing(Graphics2D g, BufferedImage sheet, int index, int frameWidth) {
+        java.awt.geom.AffineTransform saved = g.getTransform();
+        g.translate(game.playerX * T + T / 2.0, game.playerY * T + T / 2.0);
+        switch (game.facing) {
+            case LEFT -> g.scale(-1, 1);
+            case UP -> g.rotate(-Math.PI / 2);
+            case DOWN -> g.rotate(Math.PI / 2);
+            default -> { }
+        }
+        int sx = index * frameWidth;
+        g.drawImage(sheet, -T / 2, -T / 2, T / 2, T / 2, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+        g.setTransform(saved);
+    }
+
     // ---- HUD & overlays ----
 
     private void drawHud(Graphics2D g) {
         text(g, "Lives: " + game.lives, HUD, Color.WHITE, 20, 30);
         text(g, "Level: " + game.level, HUD, Color.WHITE, 490, 30);
         text(g, "Score: " + game.score, HUD, Color.WHITE, 10, 590);
+    }
+
+    private void drawPauseMenu(Graphics2D g) {
+        g.setColor(new Color(0, 0, 0, 170));
+        g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
+        g.setColor(new Color(20, 20, 20, 230));
+        g.fillRoundRect(170, 160, 260, 260, 24, 24);
+
+        text(g, "PAUSED", BIG, Color.YELLOW, 225, 220);
+        for (int i = 0; i < GamePanel.PAUSE_OPTIONS.length; i++) {
+            boolean selected = i == game.pauseSelection;
+            String label = (selected ? "> " : "   ") + GamePanel.PAUSE_OPTIONS[i];
+            text(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, 230, 275 + i * 40);
+        }
+        text(g, "Arrows + Enter  ·  P to resume", SMALL, Color.LIGHT_GRAY, 197, 400);
     }
 
     private void drawLevelComplete(Graphics2D g) {

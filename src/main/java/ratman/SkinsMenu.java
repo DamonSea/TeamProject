@@ -41,6 +41,7 @@ final class SkinsMenu extends JPanel {
         back.setBounds(CELL, CELL, CELL, CELL);
         back.setBackground(Menu.BUTTON_BLUE);
         back.setForeground(Color.BLACK);
+        back.setOpaque(true);
         back.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         back.addActionListener(e -> RatMan.showMenu());
         add(back);
