@@ -23,6 +23,9 @@ changelog section as the "What's new" at the top. (Pushing a `v1.3.0` git tag do
 The workflow is `.github/workflows/release.yml`; the download page text is `packaging/RELEASE_NOTES.md`;
 the app icon comes from `packaging/make_icon.py`.
 
+Changed the changelog or install guide after publishing? Run **Actions** → **Update release notes**
+(leave the version empty to refresh every release page).
+
 ## Run it from source
 
 Requires **Java 17+** and **Maven**.
