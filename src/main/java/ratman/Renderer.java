@@ -11,11 +11,19 @@ final class Renderer {
     private static final int T = GamePanel.TILE;
     private static final int LEADERBOARD_ROWS = 10;
 
-    private static final Font HUD = new Font("Arial", Font.BOLD, 20);
-    private static final Font BIG = new Font("Arial", Font.BOLD, 40);
-    private static final Font READY = new Font("Arial", Font.BOLD, 24);
-    private static final Font LIST = new Font("Arial", Font.BOLD, 18);
-    private static final Font SMALL = new Font("Arial", Font.BOLD, 14);
+    // The game's own retro fonts (same as the menus); all text is drawn with a dark outline
+    // (The menus' blocky RetroNakjoy font has no digits, so in-game text uses the bubbly one.)
+    private static final String BUBBLY = "/fonts/GinkobRetroFont.ttf";
+    private static final Font HUD = Assets.font(BUBBLY, 21f);
+    private static final Font SCORE = Assets.font(BUBBLY, 23f);
+    private static final Font BIG = Assets.font(BUBBLY, 46f);
+    private static final Font READY = Assets.font(BUBBLY, 36f);
+    private static final Font LIST = Assets.font(BUBBLY, 19f);
+    private static final Font SMALL = Assets.font(BUBBLY, 14f);
+    private static final Font POPUP = Assets.font(BUBBLY, 18f);
+
+    private static final Color CHEESE_YELLOW = new Color(255, 205, 50);
+    private static final Color HUD_BAR = new Color(15, 12, 25, 185);
 
     // Sprite sheets (one row of frames each)
     private final BufferedImage cats = Assets.image("/images/cats.png");            // 3 cats x 2 frames, 30px
@@ -70,8 +78,8 @@ final class Renderer {
             drawGameOver(g);
         } else if (game.waitingToStart) {
             int y = (Maze.CAGE_Y + 3) * T - 4; // just below the cage
-            centered(g, "READY!", READY, Color.YELLOW, y);
-            centered(g, "Level " + game.level + "  ·  " + game.maze.name(), SMALL, Color.WHITE, y + 22);
+            centered(g, "READY!", READY, CHEESE_YELLOW, y + 4);
+            centered(g, "Level " + game.level + "  -  " + game.maze.name(), SMALL, Color.WHITE, y + 26);
         }
     }
 
@@ -243,11 +251,63 @@ final class Renderer {
 
     // ---- HUD & overlays ----
 
+    /**
+     * Top bar: lives as little player icons, level in the middle, score with a cheese on the right.
+     * Bottom bar: best score, power-up meter, maze name. Bars sit over the outer wall rows.
+     */
     private void drawHud(Graphics2D g) {
-        text(g, "Lives: " + game.lives, HUD, Color.WHITE, 20, 30);
-        String level = "Level: " + game.level;
-        text(g, level, HUD, Color.WHITE, GamePanel.WIDTH - 20 - g.getFontMetrics(HUD).stringWidth(level), 30);
-        text(g, "Score: " + game.score, HUD, Color.WHITE, 10, GamePanel.HEIGHT - 10);
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        int w = GamePanel.WIDTH, h = GamePanel.HEIGHT;
+        g.setColor(HUD_BAR);
+        g.fillRect(0, 0, w, T);
+        g.fillRect(0, h - T, w, T);
+
+        // lives
+        BufferedImage icon = Skin.selected().icon();
+        int shown = Math.min(game.lives, 5);
+        for (int i = 0; i < shown; i++) {
+            g.drawImage(icon, 8 + i * 27, 3, 24, 24, null);
+        }
+        if (game.lives > 5) text(g, "x" + game.lives, HUD, Color.WHITE, 8 + 5 * 27 + 2, 23);
+
+        // level
+        centered(g, "LEVEL " + game.level, HUD, CHEESE_YELLOW, 23);
+
+        // score, arcade style with leading zeros, counting up as points come in
+        String score = String.format("%06d", game.displayedScore);
+        int sw = g.getFontMetrics(SCORE).stringWidth(score);
+        text(g, score, SCORE, Color.WHITE, w - 10 - sw, 24);
+        g.drawImage(cheese, w - 10 - sw - 30, 3, 25, 25, null);
+
+        // bottom bar: best score (yours if you're beating it)
+        List<Leaderboard.Entry> top = Leaderboard.load();
+        int best = top.isEmpty() ? 0 : top.get(0).score();
+        String bestText = game.score > best ? "BEST  YOU  " + game.score
+                : "BEST  " + (top.isEmpty() ? "---" : top.get(0).initials()) + "  " + best;
+        text(g, bestText, SMALL, game.score > best ? CHEESE_YELLOW : Color.LIGHT_GRAY, 10, h - 9);
+
+        String mazeName = game.maze.name().toUpperCase();
+        text(g, mazeName, SMALL, Color.LIGHT_GRAY, w - 10 - g.getFontMetrics(SMALL).stringWidth(mazeName), h - 9);
+
+        // power-up meter: a cheese-coloured bar that drains (and blinks near the end)
+        if (game.poweredUp) {
+            int barW = 140, barX = CX - barW / 2, barY = h - T + 10;
+            g.setColor(new Color(0, 0, 0, 160));
+            g.fillRoundRect(barX - 2, barY - 2, barW + 4, 14, 8, 8);
+            boolean blink = game.powerTimer <= 10 && (game.powerTimer / 2) % 2 == 0;
+            g.setColor(blink ? Color.WHITE : CHEESE_YELLOW);
+            g.fillRoundRect(barX, barY, barW * game.powerTimer / GamePanel.POWER_TICKS, 10, 6, 6);
+        }
+
+        // floating "+100" popups that rise and fade
+        for (GamePanel.Popup p : game.popups) {
+            float life = 1f - (float) p.age() / GamePanel.POPUP_TICKS;
+            java.awt.Composite old = g.getComposite();
+            g.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, Math.max(0f, life)));
+            int px = p.x() * T + T / 2, py = p.y() * T - p.age() * 2;
+            centeredAt(g, p.text(), POPUP, CHEESE_YELLOW, px, py);
+            g.setComposite(old);
+        }
     }
 
     private void drawPauseMenu(Graphics2D g) {
@@ -255,13 +315,13 @@ final class Renderer {
         g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
         int top = CY - 140;
         box(g, 260, 260, top, new Color(20, 20, 20, 230));
-        centered(g, "PAUSED", BIG, Color.YELLOW, top + 60);
+        centered(g, "PAUSED", BIG, CHEESE_YELLOW, top + 62);
         for (int i = 0; i < GamePanel.PAUSE_OPTIONS.length; i++) {
             boolean selected = i == game.pauseSelection;
             String label = selected ? "> " + GamePanel.PAUSE_OPTIONS[i] + " <" : GamePanel.PAUSE_OPTIONS[i];
             centered(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, top + 115 + i * 40);
         }
-        centered(g, "Arrows + Enter  ·  P to resume", SMALL, Color.LIGHT_GRAY, top + 240);
+        centered(g, "Arrows + Enter  /  P to resume", SMALL, Color.LIGHT_GRAY, top + 240);
     }
 
     private void drawLevelComplete(Graphics2D g) {
@@ -282,7 +342,7 @@ final class Renderer {
             centered(g, "Final score: " + game.score, HUD, Color.WHITE, CY - 15);
             centered(g, "Enter Your Initials:", HUD, Color.WHITE, CY + 40);
             centered(g, (game.initials + "___").substring(0, 3), BIG, Color.YELLOW, CY + 90);
-            centered(g, "ENTER to submit  ·  BACKSPACE to delete  ·  ESC to skip", SMALL, Color.LIGHT_GRAY, CY + 125);
+            centered(g, "Enter = save   Backspace = delete   Esc = skip", SMALL, Color.LIGHT_GRAY, CY + 125);
             return;
         }
 
@@ -304,9 +364,14 @@ final class Renderer {
             Leaderboard.Entry e = entries.get(i);
             boolean isNew = !highlighted && e.equals(latest);
             highlighted |= isNew;
-            String line = String.format("%2d. %-3s %6d", i + 1, e.initials(), e.score());
-            text(g, line, LIST, isNew ? Color.YELLOW : Color.WHITE, 20, y);
-            y += 25;
+            Color c = isNew ? Color.YELLOW : Color.WHITE;
+            // columns: rank, initials, right-aligned score (the font isn't monospaced)
+            String rank = (i + 1) + ".";
+            text(g, rank, LIST, c, 52 - g.getFontMetrics(LIST).stringWidth(rank), y);
+            text(g, e.initials(), LIST, c, 62, y);
+            String sc = Integer.toString(e.score());
+            text(g, sc, LIST, c, 200 - g.getFontMetrics(LIST).stringWidth(sc), y);
+            y += 26;
         }
     }
 
@@ -326,9 +391,36 @@ final class Renderer {
         g.fillRoundRect(CX - w / 2, top, w, h, 22, 22);
     }
 
+    /**
+     * Text with a dark outline so it reads on any background. Characters the font doesn't have
+     * are drawn with a standard bold font instead of showing up as empty boxes.
+     */
     private static void text(Graphics2D g, String s, Font font, Color color, int x, int y) {
-        g.setFont(font);
+        java.awt.geom.Path2D.Float shape = new java.awt.geom.Path2D.Float();
+        float cursor = x;
+        java.awt.font.FontRenderContext frc = g.getFontRenderContext();
+        Font fallback = new Font(Font.DIALOG, Font.BOLD, Math.round(font.getSize2D()));
+        int i = 0;
+        while (i < s.length()) {
+            boolean ok = font.canDisplay(s.charAt(i));
+            int j = i;
+            while (j < s.length() && font.canDisplay(s.charAt(j)) == ok) j++;
+            Font f = ok ? font : fallback;
+            java.awt.font.GlyphVector glyphs = f.createGlyphVector(frc, s.substring(i, j));
+            shape.append(glyphs.getOutline(cursor, y), false);
+            cursor += (float) glyphs.getLogicalBounds().getWidth();
+            i = j;
+        }
+        Object aa = g.getRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING);
+        java.awt.Stroke oldStroke = g.getStroke();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setStroke(new java.awt.BasicStroke(Math.max(2f, font.getSize2D() / 7f),
+                java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        g.setColor(OUTLINE);
+        g.draw(shape);
         g.setColor(color);
-        g.drawString(s, x, y);
+        g.fill(shape);
+        g.setStroke(oldStroke);
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, aa);
     }
 }

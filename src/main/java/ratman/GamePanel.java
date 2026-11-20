@@ -29,12 +29,11 @@ final class GamePanel extends JPanel implements ActionListener {
 
     static final int TICK_MS = 100;
     static final int CAT_MOVE_DELAY = 5;     // cats move every 5 ticks
-    static final int POWER_TICKS = 40;       // 4 s of power-up
+    static final int POWER_TICKS = 40;       // 4 s of power-up (HUD meter drains over this)
     static final int DEATH_TICKS = 20;       // death animation length
     static final int READY_TICKS = 20;       // "READY!" pause
     static final int CAGE_DOOR_TICKS = 10;
     static final int START_LIVES = 3;
-    static final long WAKA_COOLDOWN_MS = 1000;
 
     static final int DOT_POINTS = 10;
     static final int PELLET_POINTS = 50;
@@ -89,7 +88,14 @@ final class GamePanel extends JPanel implements ActionListener {
     int pauseSelection;
 
     int animTick;
-    private long lastWakaTime;
+    private boolean munchToggle;   // alternates the two "nom" sounds
+
+    // ---- HUD effects ----
+    /** Floating "+100" style labels; drawn by the renderer, aged every tick. */
+    record Popup(int x, int y, String text, int age) {}
+    static final int POPUP_TICKS = 12;
+    final java.util.List<Popup> popups = new java.util.ArrayList<>();
+    int displayedScore;            // rolls up toward score so points "count in"
 
     GamePanel() {
         this(ControllerInput.detect());
@@ -131,8 +137,8 @@ final class GamePanel extends JPanel implements ActionListener {
     void startNewGame() {
         level = 1;
         score = 0;
+        displayedScore = 0;
         startLevel();
-        SoundPlayer.play(Sound.INTRO);
     }
 
     void nextLevel() {
@@ -146,6 +152,9 @@ final class GamePanel extends JPanel implements ActionListener {
         maze = Settings.randomMazes() ? Maze.generate(random, theme) : Maze.designed(level, random, theme);
         setBackground(theme.background);
 
+        SoundPlayer.stopMusic();
+        SoundPlayer.play(Sound.START);
+        popups.clear();
         gameWon = false;
         gameOver = false;
         enteringName = false;
@@ -216,6 +225,7 @@ final class GamePanel extends JPanel implements ActionListener {
         });
 
         if (paused) return;
+        updateHudEffects();
 
         if (dying) {
             if (--deathTimer <= 0) finishDeath();
@@ -224,7 +234,10 @@ final class GamePanel extends JPanel implements ActionListener {
         if (gameOver || gameWon) return;
 
         if (waitingToStart) {
-            if (--readyTimer <= 0) waitingToStart = false;
+            if (--readyTimer <= 0) {
+                waitingToStart = false;
+                SoundPlayer.playMusic(isBossLevel() ? SoundPlayer.Track.BOSS : SoundPlayer.Track.LEVEL);
+            }
             return;
         }
 
@@ -268,11 +281,8 @@ final class GamePanel extends JPanel implements ActionListener {
         if (maze.hasDot(playerX, playerY)) {
             maze.eatDot(playerX, playerY);
             score += DOT_POINTS;
-            long now = System.currentTimeMillis();
-            if (now - lastWakaTime >= WAKA_COOLDOWN_MS) {
-                SoundPlayer.play(Sound.WAKA);
-                lastWakaTime = now;
-            }
+            munchToggle = !munchToggle;
+            SoundPlayer.play(munchToggle ? Sound.MUNCH_A : Sound.MUNCH_B);
         }
         if (maze.hasPellet(playerX, playerY)) {
             maze.eatPellet(playerX, playerY);
@@ -280,11 +290,14 @@ final class GamePanel extends JPanel implements ActionListener {
             poweredUp = true;
             powerTimer = POWER_TICKS;
             frightenCats();
-            SoundPlayer.play(Sound.POWER_UP);
+            popups.add(new Popup(playerX, playerY, "+" + PELLET_POINTS, 0));
+            SoundPlayer.play(Sound.CHEESE);
         }
 
         if (maze.isCleared()) {
             gameWon = true;
+            SoundPlayer.stopMusic();
+            SoundPlayer.play(Sound.LEVEL_CLEAR);
             return;
         }
         checkCollisions();
@@ -333,12 +346,14 @@ final class GamePanel extends JPanel implements ActionListener {
         cat.frightened = false;
         cat.respawnTimer = 0;
         score += CAT_POINTS;
+        popups.add(new Popup(cat.x, cat.y, "+" + CAT_POINTS, 0));
         SoundPlayer.play(Sound.EAT_CAT);
     }
 
     private void killPlayer() {
         dying = true;
         deathTimer = DEATH_TICKS;
+        SoundPlayer.stopMusic();
         SoundPlayer.play(Sound.DEATH);
     }
 
@@ -349,6 +364,7 @@ final class GamePanel extends JPanel implements ActionListener {
             gameOver = true;
             enteringName = true;
             initials = "";
+            SoundPlayer.play(Sound.GAME_OVER);
         } else {
             resetPositions();
         }
@@ -356,6 +372,14 @@ final class GamePanel extends JPanel implements ActionListener {
 
     void openCageDoor() {
         cageDoorTimer = CAGE_DOOR_TICKS;
+        SoundPlayer.play(Sound.CAT_FREE);
+    }
+
+    private void updateHudEffects() {
+        popups.replaceAll(p -> new Popup(p.x(), p.y(), p.text(), p.age() + 1));
+        popups.removeIf(p -> p.age() > POPUP_TICKS);
+        if (displayedScore > score) displayedScore = score;
+        if (displayedScore < score) displayedScore += Math.max(1, (score - displayedScore) / 3);
     }
 
     // =====================================================================
@@ -429,11 +453,15 @@ final class GamePanel extends JPanel implements ActionListener {
     void pause() {
         paused = true;
         pauseSelection = 0;
+        SoundPlayer.pauseMusic();
+        SoundPlayer.play(Sound.PAUSE);
         repaint();
     }
 
     void resume() {
         paused = false;
+        SoundPlayer.play(Sound.PAUSE);
+        SoundPlayer.resumeMusic();
         requestFocusInWindow();
         repaint();
     }
@@ -452,6 +480,7 @@ final class GamePanel extends JPanel implements ActionListener {
     private void movePauseSelection(int delta) {
         if (delta == 0) return;
         pauseSelection = Math.floorMod(pauseSelection + delta, PAUSE_OPTIONS.length);
+        SoundPlayer.play(Sound.CLICK);
         repaint();
     }
 

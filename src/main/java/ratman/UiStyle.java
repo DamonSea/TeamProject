@@ -92,6 +92,7 @@ final class UiStyle {
             setFocusable(false);
             setOpaque(false);
             setRolloverEnabled(true);
+            addActionListener(e -> SoundPlayer.play(SoundPlayer.Sound.CLICK));
         }
 
         static RetroButton cheese(String text, Font font) {

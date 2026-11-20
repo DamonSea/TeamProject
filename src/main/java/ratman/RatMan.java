@@ -26,17 +26,21 @@ public final class RatMan {
 
     static void showMenu() {
         show(new Menu());
+        SoundPlayer.playMusic(SoundPlayer.Track.MENU);
     }
 
     static void showSkins() {
         show(new SkinsMenu());
+        SoundPlayer.playMusic(SoundPlayer.Track.MENU);
     }
 
     static void showSettings() {
         show(new SettingsMenu());
+        SoundPlayer.playMusic(SoundPlayer.Track.MENU);
     }
 
     static void startGame() {
+        SoundPlayer.stopMusic();
         game = new GamePanel();
         show(game);
         game.start();

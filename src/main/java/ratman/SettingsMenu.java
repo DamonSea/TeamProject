@@ -22,11 +22,15 @@ final class SettingsMenu extends JPanel {
         add(title);
 
         Font font = Assets.font("/fonts/RetroNakjoy-Regular.otf", 24f);
-        add(toggle("MAZES", "DESIGNED", "RANDOM", Settings::randomMazes, Settings::setRandomMazes, font, 150));
-        add(toggle("SOUND", "ON", "OFF", () -> !Settings.soundOn(), on -> Settings.setSoundOn(!on), font, 235));
+        add(toggle("MAZES", "DESIGNED", "RANDOM", Settings::randomMazes, Settings::setRandomMazes, font, 135));
+        add(toggle("MUSIC", "ON", "OFF", () -> !Settings.musicOn(), off -> {
+            Settings.setMusicOn(!off);
+            SoundPlayer.musicSettingChanged(SoundPlayer.Track.MENU);
+        }, font, 205));
+        add(toggle("SOUND FX", "ON", "OFF", () -> !Settings.sfxOn(), off -> Settings.setSfxOn(!off), font, 275));
 
         UiStyle.RetroButton back = UiStyle.RetroButton.cheese("BACK", Assets.font("/fonts/RetroNakjoy-Regular.otf", 30f));
-        back.setBounds(150, 360, 200, 66);
+        back.setBounds(150, 370, 200, 66);
         back.addActionListener(e -> RatMan.showMenu());
         add(back);
     }
@@ -43,7 +47,7 @@ final class SettingsMenu extends JPanel {
         b.setFont(font);
         Runnable refresh = () -> b.setText(label + ":  " + (isSecond.getAsBoolean() ? second : first));
         refresh.run();
-        b.setBounds(70, y, 360, 66);
+        b.setBounds(70, y, 360, 58);
         b.addActionListener(e -> {
             setSecond.accept(!isSecond.getAsBoolean());
             refresh.run();
