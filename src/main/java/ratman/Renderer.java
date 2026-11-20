@@ -46,7 +46,9 @@ final class Renderer {
         }
         drawHud(g);
 
-        if (game.gameWon) {
+        if (game.paused) {
+            drawPauseMenu(g);
+        } else if (game.gameWon) {
             drawLevelComplete(g);
         } else if (game.gameOver) {
             drawGameOver(g);
@@ -120,28 +122,39 @@ final class Renderer {
         Skin skin = Skin.selected();
         BufferedImage sheet = skin.sheet();
         int fw = sheet.getWidth() / skin.frameCount;
-        drawFrame(g, sheet, game.animTick % skin.frameCount, fw, game.playerX, game.playerY, game.facingLeft);
+        drawFacing(g, sheet, game.animTick % skin.frameCount, fw);
     }
 
     private void drawDeath(Graphics2D g) {
         int fw = death.getWidth() / DEATH_FRAMES;
         int elapsed = GamePanel.DEATH_TICKS - game.deathTimer;
         int phase = Math.min(DEATH_FRAMES - 1, Math.max(0, elapsed * DEATH_FRAMES / GamePanel.DEATH_TICKS));
-        drawFrame(g, death, phase, fw, game.playerX, game.playerY, game.facingLeft);
+        drawFacing(g, death, phase, fw);
     }
 
     /** Draws frame {@code index} (each {@code frameWidth} px wide) of a sheet, scaled into tile (x, y). */
     private static void drawFrame(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int x, int y) {
-        drawFrame(g, sheet, index, frameWidth, x, y, false);
-    }
-
-    /** Same, optionally mirrored left-to-right (sprites are drawn facing right). */
-    private static void drawFrame(Graphics2D g, BufferedImage sheet, int index, int frameWidth,
-                                  int x, int y, boolean mirror) {
         int sx = index * frameWidth;
         int px = x * T, py = y * T;
-        int left = mirror ? px + T : px, right = mirror ? px : px + T;
-        g.drawImage(sheet, left, py, right, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+        g.drawImage(sheet, px, py, px + T, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+    }
+
+    /**
+     * Draws a player frame turned to face the direction of travel. Sprites face right,
+     * so left is a mirror image and up/down are 90-degree rotations.
+     */
+    private void drawFacing(Graphics2D g, BufferedImage sheet, int index, int frameWidth) {
+        java.awt.geom.AffineTransform saved = g.getTransform();
+        g.translate(game.playerX * T + T / 2.0, game.playerY * T + T / 2.0);
+        switch (game.facing) {
+            case LEFT -> g.scale(-1, 1);
+            case UP -> g.rotate(-Math.PI / 2);
+            case DOWN -> g.rotate(Math.PI / 2);
+            default -> { }
+        }
+        int sx = index * frameWidth;
+        g.drawImage(sheet, -T / 2, -T / 2, T / 2, T / 2, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+        g.setTransform(saved);
     }
 
     // ---- HUD & overlays ----
@@ -150,6 +163,21 @@ final class Renderer {
         text(g, "Lives: " + game.lives, HUD, Color.WHITE, 20, 30);
         text(g, "Level: " + game.level, HUD, Color.WHITE, 490, 30);
         text(g, "Score: " + game.score, HUD, Color.WHITE, 10, 590);
+    }
+
+    private void drawPauseMenu(Graphics2D g) {
+        g.setColor(new Color(0, 0, 0, 170));
+        g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
+        g.setColor(new Color(20, 20, 20, 230));
+        g.fillRoundRect(170, 160, 260, 260, 24, 24);
+
+        text(g, "PAUSED", BIG, Color.YELLOW, 225, 220);
+        for (int i = 0; i < GamePanel.PAUSE_OPTIONS.length; i++) {
+            boolean selected = i == game.pauseSelection;
+            String label = (selected ? "> " : "   ") + GamePanel.PAUSE_OPTIONS[i];
+            text(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, 230, 275 + i * 40);
+        }
+        text(g, "Arrows + Enter  ·  P to resume", SMALL, Color.LIGHT_GRAY, 197, 400);
     }
 
     private void drawLevelComplete(Graphics2D g) {

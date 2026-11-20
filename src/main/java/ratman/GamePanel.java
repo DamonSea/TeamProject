@@ -56,7 +56,10 @@ final class GamePanel extends JPanel implements ActionListener {
     int playerX, playerY;
     int moveDx, moveDy;       // current direction
     int queuedDx, queuedDy;   // buffered turn, applied as soon as it's possible
-    boolean facingLeft;       // sprite is mirrored when the last sideways move was to the left
+    Facing facing = Facing.RIGHT; // which way the player sprite points
+
+    /** Sprites are drawn facing right; the renderer mirrors or rotates them for the others. */
+    enum Facing { RIGHT, LEFT, UP, DOWN }
     boolean poweredUp;
     int powerTimer;
 
@@ -80,6 +83,11 @@ final class GamePanel extends JPanel implements ActionListener {
     boolean enteringName;
     String initials = "";
 
+    // ---- pause menu ----
+    static final String[] PAUSE_OPTIONS = {"Resume", "Restart", "Main Menu"};
+    boolean paused;
+    int pauseSelection;
+
     int animTick;
     private long lastWakaTime;
 
@@ -95,6 +103,13 @@ final class GamePanel extends JPanel implements ActionListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 handleKey(e.getKeyCode(), e.getKeyChar());
+            }
+        });
+        // Pause automatically if the window loses focus (e.g. you click another app)
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (canPause()) pause();
             }
         });
         startNewGame();
@@ -134,6 +149,7 @@ final class GamePanel extends JPanel implements ActionListener {
         gameWon = false;
         gameOver = false;
         enteringName = false;
+        paused = false;
         dying = false;
         initials = "";
         animTick = 0;
@@ -147,7 +163,7 @@ final class GamePanel extends JPanel implements ActionListener {
         playerX = Maze.START_X;
         playerY = Maze.START_Y;
         moveDx = moveDy = queuedDx = queuedDy = 0;
-        facingLeft = false;
+        facing = Facing.RIGHT;
         poweredUp = false;
         powerTimer = 0;
 
@@ -189,7 +205,8 @@ final class GamePanel extends JPanel implements ActionListener {
         controller.poll(new ControllerInput.Listener() {
             @Override
             public void onDirection(int dx, int dy) {
-                if (!gameOver && !gameWon) queueDirection(dx, dy);
+                if (paused) movePauseSelection(dy);
+                else if (!gameOver && !gameWon) queueDirection(dx, dy);
             }
 
             @Override
@@ -197,6 +214,8 @@ final class GamePanel extends JPanel implements ActionListener {
                 handleStartButton();
             }
         });
+
+        if (paused) return;
 
         if (dying) {
             if (--deathTimer <= 0) finishDeath();
@@ -244,7 +263,7 @@ final class GamePanel extends JPanel implements ActionListener {
 
         playerX = nx;
         playerY = ny;
-        if (moveDx != 0) facingLeft = moveDx < 0;
+        facing = moveDx > 0 ? Facing.RIGHT : moveDx < 0 ? Facing.LEFT : moveDy < 0 ? Facing.UP : Facing.DOWN;
 
         if (maze.hasDot(playerX, playerY)) {
             maze.eatDot(playerX, playerY);
@@ -353,6 +372,14 @@ final class GamePanel extends JPanel implements ActionListener {
             handleInitialsKey(key, ch);
             return;
         }
+        if (paused) {
+            handlePauseKey(key);
+            return;
+        }
+        if ((key == KeyEvent.VK_P || key == KeyEvent.VK_ESCAPE) && canPause()) {
+            pause();
+            return;
+        }
         if (gameOver) {
             if (key == KeyEvent.VK_R || key == KeyEvent.VK_ENTER) startNewGame();
             return;
@@ -392,7 +419,65 @@ final class GamePanel extends JPanel implements ActionListener {
         enteringName = false;
     }
 
+    // ---- pause menu ----
+
+    /** Can pause during play or the READY countdown, but not on the death/win/game-over screens. */
+    boolean canPause() {
+        return !paused && !gameOver && !gameWon && !dying && !enteringName;
+    }
+
+    void pause() {
+        paused = true;
+        pauseSelection = 0;
+        repaint();
+    }
+
+    void resume() {
+        paused = false;
+        requestFocusInWindow();
+        repaint();
+    }
+
+    private void handlePauseKey(int key) {
+        switch (key) {
+            case KeyEvent.VK_P, KeyEvent.VK_ESCAPE -> resume();
+            case KeyEvent.VK_UP, KeyEvent.VK_W -> movePauseSelection(-1);
+            case KeyEvent.VK_DOWN, KeyEvent.VK_S -> movePauseSelection(1);
+            case KeyEvent.VK_ENTER, KeyEvent.VK_SPACE -> choosePauseOption();
+            default -> { }
+        }
+        repaint();
+    }
+
+    private void movePauseSelection(int delta) {
+        if (delta == 0) return;
+        pauseSelection = Math.floorMod(pauseSelection + delta, PAUSE_OPTIONS.length);
+        repaint();
+    }
+
+    private void choosePauseOption() {
+        switch (pauseSelection) {
+            case 0 -> resume();
+            case 1 -> {
+                paused = false;
+                startNewGame();
+            }
+            default -> {
+                paused = false;
+                RatMan.showMenu();
+            }
+        }
+    }
+
     private void handleStartButton() {
+        if (paused) {
+            choosePauseOption();
+            return;
+        }
+        if (canPause()) {
+            pause();
+            return;
+        }
         if (enteringName) {
             if (initials.length() == 3) submitInitials();
             else enteringName = false;

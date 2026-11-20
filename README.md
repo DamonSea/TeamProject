@@ -22,6 +22,7 @@ To build a jar: `mvn package` → `target/rat-man-1.1.0.jar`.
 |---|---|---|
 | Move | Arrow keys or WASD | D-pad or left stick |
 | Next level / restart | R or Enter | Start (Button 6) |
+| Pause menu | P or Esc (arrows + Enter to choose) | Start |
 | Enter initials | Type 3 letters, Enter to save, Esc to skip | Start skips |
 
 Debug mode (999 lives; press `0` to clear a level):
