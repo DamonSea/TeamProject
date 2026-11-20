@@ -33,6 +33,12 @@ Debug mode (999 lives; press `0` to clear a level):
 - Four hand-designed mazes: **Classic, Courtyard, Labyrinth, Boss Arena**. They repeat after level 4.
 - Levels cycle through three themes: **Outdoor → Classroom → Planets**
 - Levels 1–3 have 1–3 cats; level 4 is the **boss** (fast and can't be eaten); then the cycle repeats
+- The cats hunt like Pac-Man's ghosts, each in its own way:
+  - **Orange eyes – the Chaser:** follows the shortest path straight to you
+  - **Yellow eyes – the Ambusher:** aims 4 tiles ahead of where you're heading
+  - **Green eyes – the Flanker:** works with the Chaser to box you in from the other side
+- Cats alternate between short **scatter** waves (each runs to its own corner) and **chase** waves.
+  They turn around when the wave changes. They start at half your speed and get faster each level (up to 80%).
 - Prefer chaos? **Settings → Mazes: Random** generates a new maze every level (Settings also has Music and Sound FX toggles)
 
 ### Making your own level

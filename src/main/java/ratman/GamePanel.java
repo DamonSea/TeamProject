@@ -28,7 +28,6 @@ final class GamePanel extends JPanel implements ActionListener {
     static final int HEIGHT = Maze.ROWS * TILE;
 
     static final int TICK_MS = 100;
-    static final int CAT_MOVE_DELAY = 5;     // cats move every 5 ticks
     static final int POWER_TICKS = 40;       // 4 s of power-up (HUD meter drains over this)
     static final int DEATH_TICKS = 20;       // death animation length
     static final int READY_TICKS = 20;       // "READY!" pause
@@ -40,7 +39,15 @@ final class GamePanel extends JPanel implements ActionListener {
     static final int CAT_POINTS = 100;
 
     private final Random random = new Random();
-    private final Timer timer = new Timer(TICK_MS, this);
+    /**
+     * The game logic still steps every 100 ms (TICK_MS), but the screen redraws ~60 times a second
+     * and characters slide smoothly between tiles in between steps.
+     */
+    static final int FRAME_MS = 16;
+    private static final long TICK_NANOS = TICK_MS * 1_000_000L;
+    private final Timer timer = new Timer(FRAME_MS, this);
+    private long lastTickNanos;
+    long tickCount;
     private final ControllerInput controller;
     private final Renderer renderer = new Renderer(this);
 
@@ -53,6 +60,8 @@ final class GamePanel extends JPanel implements ActionListener {
 
     // ---- player ----
     int playerX, playerY;
+    int prevX, prevY;          // where the player was before the last step (for smooth drawing)
+    long playerMoveTick;
     int moveDx, moveDy;       // current direction
     int queuedDx, queuedDy;   // buffered turn, applied as soon as it's possible
     Facing facing = Facing.RIGHT; // which way the player sprite points
@@ -64,12 +73,15 @@ final class GamePanel extends JPanel implements ActionListener {
 
     // ---- enemies ----
     final List<Cat> cats = List.of(
-            new Cat(0, Maze.CAGE_X - 1, Maze.CAGE_Y, 0),
-            new Cat(1, Maze.CAGE_X, Maze.CAGE_Y, 20),
-            new Cat(2, Maze.CAGE_X + 1, Maze.CAGE_Y, 40));
+            new Cat(0, Cat.Personality.CHASER, Maze.CAGE_X - 1, Maze.CAGE_Y, 0),
+            new Cat(1, Cat.Personality.AMBUSHER, Maze.CAGE_X, Maze.CAGE_Y, 30),
+            new Cat(2, Cat.Personality.FLANKER, Maze.CAGE_X + 1, Maze.CAGE_Y, 60));
     int bossX, bossY;
     int bossDirX, bossDirY;
-    int catMoveCounter;
+    int bossPrevX, bossPrevY;
+    long bossMoveTick;
+    int ticksIntoLife;                    // drives the cats' scatter/chase waves
+    CatAI.Mode catMode = CatAI.Mode.SCATTER;
     int cageDoorTimer;
 
     // ---- flow ----
@@ -122,6 +134,7 @@ final class GamePanel extends JPanel implements ActionListener {
     }
 
     void start() {
+        lastTickNanos = 0;
         timer.start();
         requestFocusInWindow();
     }
@@ -162,7 +175,6 @@ final class GamePanel extends JPanel implements ActionListener {
         dying = false;
         initials = "";
         animTick = 0;
-        catMoveCounter = 0;
         resetPositions();
         repaint();
     }
@@ -171,6 +183,8 @@ final class GamePanel extends JPanel implements ActionListener {
     void resetPositions() {
         playerX = maze.startX();
         playerY = maze.startY();
+        prevX = playerX;
+        prevY = playerY;
         moveDx = moveDy = queuedDx = queuedDy = 0;
         facing = Facing.RIGHT;
         poweredUp = false;
@@ -179,6 +193,10 @@ final class GamePanel extends JPanel implements ActionListener {
         cats.forEach(Cat::reset);
         bossX = Maze.CAGE_X;
         bossY = Maze.CAGE_Y;
+        bossPrevX = bossX;
+        bossPrevY = bossY;
+        ticksIntoLife = 0;
+        catMode = CatAI.Mode.SCATTER;
         bossDirX = bossDirY = 0;
         cageDoorTimer = 0;
 
@@ -205,8 +223,42 @@ final class GamePanel extends JPanel implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        tick();
+        // Fixed-step game logic: run one tick per 100 ms of real time, redraw every frame
+        long now = System.nanoTime();
+        if (lastTickNanos == 0) lastTickNanos = now;
+        int steps = 0;
+        while (now - lastTickNanos >= TICK_NANOS && steps < 5) {
+            tick();
+            lastTickNanos += TICK_NANOS;
+            steps++;
+        }
+        if (now - lastTickNanos >= TICK_NANOS) lastTickNanos = now; // fell far behind (e.g. laptop slept)
         repaint();
+    }
+
+    /** How far (0..1) real time is between the last tick and the next, for sliding sprites. */
+    double frameAlpha() {
+        if (lastTickNanos == 0 || paused) return 1;
+        return Math.min(1, Math.max(0, (System.nanoTime() - lastTickNanos) / (double) TICK_NANOS));
+    }
+
+    /** Smoothed position (in tiles) between a previous and current tile. */
+    double slide(int from, int to, long startTick, double lengthTicks) {
+        if (Math.abs(to - from) > 1) return to; // tunnel wrap: don't slide across the whole screen
+        double progress = (tickCount - startTick + frameAlpha()) / Math.max(1e-9, lengthTicks);
+        progress = Math.min(1, Math.max(0, progress));
+        return from + (to - from) * progress;
+    }
+
+    /** Direction the player is heading (or facing, if stopped). Used by the Ambusher and Flanker. */
+    int[] playerDirection() {
+        if (moveDx != 0 || moveDy != 0) return new int[]{moveDx, moveDy};
+        return switch (facing) {
+            case LEFT -> new int[]{-1, 0};
+            case UP -> new int[]{0, -1};
+            case DOWN -> new int[]{0, 1};
+            default -> new int[]{1, 0};
+        };
     }
 
     /** One 100 ms step of the game. */
@@ -225,6 +277,7 @@ final class GamePanel extends JPanel implements ActionListener {
         });
 
         if (paused) return;
+        tickCount++;
         updateHudEffects();
 
         if (dying) {
@@ -253,10 +306,10 @@ final class GamePanel extends JPanel implements ActionListener {
 
         if (isBossLevel()) {
             CatAI.moveBoss(this);
-        } else if (++catMoveCounter >= CAT_MOVE_DELAY) {
-            catMoveCounter = 0;
+        } else {
             CatAI.moveCats(this);
         }
+        ticksIntoLife++;
         checkCollisions();
 
         if (cageDoorTimer > 0) cageDoorTimer--;
@@ -270,6 +323,9 @@ final class GamePanel extends JPanel implements ActionListener {
             queuedDx = queuedDy = 0;
         }
 
+        prevX = playerX;
+        prevY = playerY;
+        playerMoveTick = tickCount;
         int nx = wrapX(playerX + moveDx);
         int ny = playerY + moveDy;
         if (!maze.isWalkable(nx, ny)) return;
