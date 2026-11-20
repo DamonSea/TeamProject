@@ -1,41 +1,59 @@
 package ratman;
 
-import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 /** Title screen with START and SKINS buttons. */
 final class Menu extends JPanel {
-    static final Color BUTTON_BLUE = new Color(120, 200, 255);
+    private static final int W = 500, H = 470;
+    private static final int PATH_Y = 400; // little chase scene along the bottom
 
     Menu() {
-        setPreferredSize(new Dimension(500, 470));
-        setBackground(new Color(200, 200, 200));
+        setPreferredSize(new Dimension(W, H));
         setLayout(null);
 
-        JLabel title = new JLabel("Rat-Man");
-        title.setFont(Assets.font("/fonts/GinkobRetroFont.ttf", 100f));
-        title.setForeground(Color.BLACK);
-        title.setBounds(50, 80, 500, 100);
+        UiStyle.Title title = new UiStyle.Title("Rat-Man", Assets.font("/fonts/GinkobRetroFont.ttf", 100f));
+        title.setBounds(0, 40, W, 140);
         add(title);
 
         Font buttonFont = Assets.font("/fonts/RetroNakjoy-Regular.otf", 30f);
-        add(button("START", buttonFont, 230, RatMan::startGame));
-        add(button("SKINS", buttonFont, 310, RatMan::showSkins));
+        UiStyle.RetroButton start = UiStyle.RetroButton.cheese("START", buttonFont);
+        start.setBounds(150, 205, 200, 66);
+        start.addActionListener(e -> RatMan.startGame());
+        add(start);
+
+        UiStyle.RetroButton skins = UiStyle.RetroButton.cheese("SKINS", buttonFont);
+        skins.setBounds(150, 290, 200, 66);
+        skins.addActionListener(e -> RatMan.showSkins());
+        add(skins);
     }
 
-    private static JButton button(String label, Font font, int y, Runnable action) {
-        JButton b = new JButton(label);
-        b.setBounds(160, y, 180, 60);
-        b.setFont(font);
-        b.setFocusable(false);
-        b.setBackground(BUTTON_BLUE);
-        b.setForeground(Color.WHITE);
-        b.setOpaque(true);
-        b.addActionListener(e -> action.run());
-        return b;
+    @Override
+    protected void paintComponent(Graphics g0) {
+        Graphics2D g = (Graphics2D) g0;
+        UiStyle.paintBackground(g, getWidth(), getHeight());
+        paintChase(g);
+    }
+
+    /** A strip of path with dots: a cat chasing the selected skin toward a piece of cheese. */
+    private void paintChase(Graphics2D g) {
+        int t = GamePanel.TILE;
+        g.setColor(Theme.OUTDOOR.background);
+        g.fillRect(0, PATH_Y, getWidth(), t + 10);
+        g.setColor(Color.WHITE);
+        for (int x = 15; x < getWidth(); x += t) {
+            if (x > 120 && x < 330) continue; // eaten already
+            g.fillOval(x + 5, PATH_Y + 15, 10, 10);
+        }
+        int y = PATH_Y - 2;
+        BufferedImage cats = Assets.image("/images/cats.png");
+        g.drawImage(cats, 120, y, 162, y + 42, 60, 0, 90, 30, null); // orange cat
+        g.drawImage(Skin.selected().icon(), 250, y, 42, 42, null);
+        g.drawImage(Assets.image("/images/pelletcheese.png"), 420, PATH_Y + 2, 30, 30, null);
     }
 }

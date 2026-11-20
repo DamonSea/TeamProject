@@ -1,33 +1,41 @@
 package ratman;
 
-import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** 2x2 grid: three skins plus a Back button. The selected skin gets a yellow border. */
+/** 2x2 grid: three skins plus a Back button. The chosen skin gets a yellow border. */
 final class SkinsMenu extends JPanel {
-    private static final int CELL = 250;
-    private final Map<Skin, JButton> buttons = new EnumMap<>(Skin.class);
+    private static final int SIZE = 500;
+    private static final int GAP = 16;
+    private static final int CELL = (SIZE - 3 * GAP) / 2;
+    private static final int ICON = 150;
+
+    private final Map<Skin, UiStyle.RetroButton> buttons = new EnumMap<>(Skin.class);
 
     SkinsMenu() {
-        setPreferredSize(new Dimension(2 * CELL, 2 * CELL));
+        setPreferredSize(new Dimension(SIZE, SIZE));
         setLayout(null);
-        setBackground(Color.LIGHT_GRAY);
 
+        Font labelFont = Assets.font("/fonts/RetroNakjoy-Regular.otf", 24f);
         Skin[] skins = Skin.values();
         for (int i = 0; i < skins.length; i++) {
             Skin skin = skins[i];
-            Image icon = skin.firstFrame().getScaledInstance(CELL, CELL, Image.SCALE_SMOOTH);
-            JButton b = new JButton(new ImageIcon(icon));
-            b.setToolTipText(skin.displayName);
-            b.setBounds((i % 2) * CELL, (i / 2) * CELL, CELL, CELL);
+            Image icon = skin.icon().getScaledInstance(ICON, ICON, Image.SCALE_FAST); // keep pixels crisp
+            UiStyle.RetroButton b = new UiStyle.RetroButton(skin.displayName, new ImageIcon(icon),
+                    UiStyle.PANEL, UiStyle.PANEL_HOVER, UiStyle.PANEL, Color.WHITE);
+            b.setFont(labelFont);
+            b.setVerticalTextPosition(SwingConstants.BOTTOM);
+            b.setHorizontalTextPosition(SwingConstants.CENTER);
+            b.setBounds(cellX(i), cellY(i), CELL, CELL);
             b.addActionListener(e -> {
                 Skin.select(skin);
                 updateSelection();
@@ -36,22 +44,28 @@ final class SkinsMenu extends JPanel {
             add(b);
         }
 
-        JButton back = new JButton("Back");
-        back.setFont(new Font("Arial", Font.BOLD, 24));
-        back.setBounds(CELL, CELL, CELL, CELL);
-        back.setBackground(Menu.BUTTON_BLUE);
-        back.setForeground(Color.BLACK);
-        back.setOpaque(true);
-        back.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        UiStyle.RetroButton back = UiStyle.RetroButton.cheese("BACK", Assets.font("/fonts/RetroNakjoy-Regular.otf", 34f));
+        back.setBounds(cellX(3), cellY(3), CELL, CELL);
         back.addActionListener(e -> RatMan.showMenu());
         add(back);
 
         updateSelection();
     }
 
+    private static int cellX(int i) {
+        return GAP + (i % 2) * (CELL + GAP);
+    }
+
+    private static int cellY(int i) {
+        return GAP + (i / 2) * (CELL + GAP);
+    }
+
     private void updateSelection() {
-        buttons.forEach((skin, b) -> b.setBorder(skin == Skin.selected()
-                ? BorderFactory.createLineBorder(Color.YELLOW, 6)
-                : BorderFactory.createLineBorder(Color.DARK_GRAY, 1)));
+        buttons.forEach((skin, b) -> b.setChosen(skin == Skin.selected()));
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        UiStyle.paintBackground((Graphics2D) g, getWidth(), getHeight());
     }
 }
