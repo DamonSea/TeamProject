@@ -52,4 +52,5 @@ src/main/java/ratman/
 src/main/resources/    images, sounds, fonts, maze themes
 ```
 
-High scores are saved to `leaderboard.txt` in the folder you run the game from.
+High scores are saved to `~/.ratman/leaderboard.txt` (your home folder), so playing doesn't create Git changes.
+The first run copies in the team's original scores.

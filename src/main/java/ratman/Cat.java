@@ -10,7 +10,9 @@ final class Cat {
     int x;
     int y;
     int releaseTimer;
+    int dirX, dirY;       // last move, so the cat doesn't turn straight back
     boolean eyes;
+    boolean frightened;   // set by a power pellet; only frightened cats can be eaten
     int respawnTimer;
 
     Cat(int index, int homeX, int homeY, int startDelay) {
@@ -25,7 +27,9 @@ final class Cat {
         x = homeX;
         y = homeY;
         releaseTimer = startDelay;
+        dirX = dirY = 0;
         eyes = false;
+        frightened = false;
         respawnTimer = 0;
     }
 

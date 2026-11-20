@@ -19,7 +19,6 @@ public final class RatMan {
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setResizable(false);
             showMenu();
-            frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
     }
@@ -45,6 +44,7 @@ public final class RatMan {
         }
         frame.setContentPane(panel);
         frame.pack(); // size the window to the panel, so nothing is cut off by the title bar
+        frame.setLocationRelativeTo(null); // re-centre, since the game screen is bigger than the menu
         frame.revalidate();
         frame.repaint();
     }

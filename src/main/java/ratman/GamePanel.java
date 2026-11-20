@@ -40,9 +40,6 @@ final class GamePanel extends JPanel implements ActionListener {
     static final int PELLET_POINTS = 50;
     static final int CAT_POINTS = 100;
 
-    static final int PLAYER_START_X = 1;
-    static final int PLAYER_START_Y = 1;
-
     private final Random random = new Random();
     private final Timer timer = new Timer(TICK_MS, this);
     private final ControllerInput controller;
@@ -68,6 +65,7 @@ final class GamePanel extends JPanel implements ActionListener {
             new Cat(1, Maze.CAGE_X, Maze.CAGE_Y, 20),
             new Cat(2, Maze.CAGE_X + 1, Maze.CAGE_Y, 40));
     int bossX, bossY;
+    int bossDirX, bossDirY;
     int catMoveCounter;
     int cageDoorTimer;
 
@@ -145,8 +143,8 @@ final class GamePanel extends JPanel implements ActionListener {
 
     /** Puts everyone back at their start positions (new level or after losing a life). */
     void resetPositions() {
-        playerX = PLAYER_START_X;
-        playerY = PLAYER_START_Y;
+        playerX = Maze.START_X;
+        playerY = Maze.START_Y;
         moveDx = moveDy = queuedDx = queuedDy = 0;
         poweredUp = false;
         powerTimer = 0;
@@ -154,6 +152,7 @@ final class GamePanel extends JPanel implements ActionListener {
         cats.forEach(Cat::reset);
         bossX = Maze.CAGE_X;
         bossY = Maze.CAGE_Y;
+        bossDirX = bossDirY = 0;
         cageDoorTimer = 0;
 
         waitingToStart = true;
@@ -215,6 +214,7 @@ final class GamePanel extends JPanel implements ActionListener {
 
         if (poweredUp && --powerTimer <= 0) {
             poweredUp = false;
+            cats.forEach(c -> c.frightened = false);
         }
 
         if (isBossLevel()) {
@@ -238,7 +238,7 @@ final class GamePanel extends JPanel implements ActionListener {
 
         int nx = wrapX(playerX + moveDx);
         int ny = playerY + moveDy;
-        if (!maze.isOpen(nx, ny)) return;
+        if (!maze.isWalkable(nx, ny)) return;
 
         playerX = nx;
         playerY = ny;
@@ -257,6 +257,7 @@ final class GamePanel extends JPanel implements ActionListener {
             score += PELLET_POINTS;
             poweredUp = true;
             powerTimer = POWER_TICKS;
+            frightenCats();
             SoundPlayer.play(Sound.POWER_UP);
         }
 
@@ -268,7 +269,7 @@ final class GamePanel extends JPanel implements ActionListener {
     }
 
     private boolean canEnter(int x, int y) {
-        return maze.isOpen(wrapX(x), y);
+        return maze.isWalkable(wrapX(x), y);
     }
 
     /** The side tunnels wrap around to the other edge. */
@@ -286,7 +287,7 @@ final class GamePanel extends JPanel implements ActionListener {
         }
         for (Cat cat : activeCats()) {
             if (!cat.isAt(playerX, playerY) || cat.eyes) continue;
-            if (poweredUp) {
+            if (cat.frightened) {
                 eatCat(cat);
             } else {
                 killPlayer();
@@ -295,8 +296,19 @@ final class GamePanel extends JPanel implements ActionListener {
         }
     }
 
+    /** Every cat currently out (not eyes) gets scared and turns around, like in Pac-Man. */
+    private void frightenCats() {
+        for (Cat cat : activeCats()) {
+            if (cat.eyes) continue;
+            cat.frightened = true;
+            cat.dirX = -cat.dirX;
+            cat.dirY = -cat.dirY;
+        }
+    }
+
     private void eatCat(Cat cat) {
         cat.eyes = true;
+        cat.frightened = false;
         cat.respawnTimer = 0;
         score += CAT_POINTS;
         SoundPlayer.play(Sound.EAT_CAT);

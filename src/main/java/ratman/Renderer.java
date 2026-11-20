@@ -97,12 +97,17 @@ final class Renderer {
         for (Cat cat : game.activeCats()) {
             if (cat.eyes) {
                 drawFrame(g, catEyes, frame, catEyes.getHeight(), cat.x, cat.y);
-            } else if (game.poweredUp) {
+            } else if (cat.frightened && !flashWarning()) {
                 drawFrame(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cat.x, cat.y);
             } else {
                 drawFrame(g, cats, cat.index * 2 + frame, cats.getHeight(), cat.x, cat.y);
             }
         }
+    }
+
+    /** In the last second of a power-up, scared cats flash back to normal as a warning. */
+    private boolean flashWarning() {
+        return game.powerTimer <= 10 && (game.powerTimer / 2) % 2 == 0;
     }
 
     private void drawPlayer(Graphics2D g) {
