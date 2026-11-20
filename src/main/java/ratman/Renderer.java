@@ -69,7 +69,9 @@ final class Renderer {
         } else if (game.gameOver) {
             drawGameOver(g);
         } else if (game.waitingToStart) {
-            text(g, "READY!", READY, Color.YELLOW, GamePanel.WIDTH / 2 - 50, GamePanel.HEIGHT / 2);
+            int y = (Maze.CAGE_Y + 3) * T - 4; // just below the cage
+            centered(g, "READY!", READY, Color.YELLOW, y);
+            centered(g, "Level " + game.level + "  ·  " + game.maze.name(), SMALL, Color.WHITE, y + 22);
         }
     }
 
@@ -243,51 +245,52 @@ final class Renderer {
 
     private void drawHud(Graphics2D g) {
         text(g, "Lives: " + game.lives, HUD, Color.WHITE, 20, 30);
-        text(g, "Level: " + game.level, HUD, Color.WHITE, 490, 30);
-        text(g, "Score: " + game.score, HUD, Color.WHITE, 10, 590);
+        String level = "Level: " + game.level;
+        text(g, level, HUD, Color.WHITE, GamePanel.WIDTH - 20 - g.getFontMetrics(HUD).stringWidth(level), 30);
+        text(g, "Score: " + game.score, HUD, Color.WHITE, 10, GamePanel.HEIGHT - 10);
     }
 
     private void drawPauseMenu(Graphics2D g) {
         g.setColor(new Color(0, 0, 0, 170));
         g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
-        g.setColor(new Color(20, 20, 20, 230));
-        g.fillRoundRect(170, 160, 260, 260, 24, 24);
-
-        text(g, "PAUSED", BIG, Color.YELLOW, 225, 220);
+        int top = CY - 140;
+        box(g, 260, 260, top, new Color(20, 20, 20, 230));
+        centered(g, "PAUSED", BIG, Color.YELLOW, top + 60);
         for (int i = 0; i < GamePanel.PAUSE_OPTIONS.length; i++) {
             boolean selected = i == game.pauseSelection;
-            String label = (selected ? "> " : "   ") + GamePanel.PAUSE_OPTIONS[i];
-            text(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, 230, 275 + i * 40);
+            String label = selected ? "> " + GamePanel.PAUSE_OPTIONS[i] + " <" : GamePanel.PAUSE_OPTIONS[i];
+            centered(g, label, HUD, selected ? Color.YELLOW : Color.WHITE, top + 115 + i * 40);
         }
-        text(g, "Arrows + Enter  ·  P to resume", SMALL, Color.LIGHT_GRAY, 197, 400);
+        centered(g, "Arrows + Enter  ·  P to resume", SMALL, Color.LIGHT_GRAY, top + 240);
     }
 
     private void drawLevelComplete(Graphics2D g) {
-        g.setColor(new Color(0, 0, 0, 190));
-        g.fillRoundRect(150, 200, 300, 140, 20, 20);
-        text(g, "Level Clear!", BIG, Color.GREEN, 185, 250);
+        int top = CY - 85;
+        box(g, 300, 140, top, new Color(0, 0, 0, 190));
+        centered(g, "Level Clear!", BIG, Color.GREEN, top + 50);
         String next = (game.level + 1) % 4 == 0 ? "Boss level next!" : "Score: " + game.score;
-        text(g, next, HUD, Color.WHITE, 220, 285);
-        text(g, "Press 'R' to Advance", HUD, Color.YELLOW, 190, 320);
+        centered(g, next, HUD, Color.WHITE, top + 85);
+        centered(g, "Press 'R' to Advance", HUD, Color.YELLOW, top + 120);
     }
 
     private void drawGameOver(Graphics2D g) {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, GamePanel.WIDTH, GamePanel.HEIGHT);
 
-        text(g, "Game Over", BIG, Color.RED, 200, 250);
-        text(g, "Final score: " + game.score, HUD, Color.WHITE, 215, 285);
-
         if (game.enteringName) {
-            int cx = GamePanel.WIDTH / 2;
-            text(g, "Enter Your Initials:", HUD, Color.WHITE, cx - 95, 340);
-            String shown = (game.initials + "___").substring(0, 3);
-            text(g, shown, BIG, Color.YELLOW, cx - 40, 390);
-            text(g, "ENTER to submit  ·  BACKSPACE to delete  ·  ESC to skip", SMALL, Color.LIGHT_GRAY, cx - 195, 425);
+            centered(g, "Game Over", BIG, Color.RED, CY - 50);
+            centered(g, "Final score: " + game.score, HUD, Color.WHITE, CY - 15);
+            centered(g, "Enter Your Initials:", HUD, Color.WHITE, CY + 40);
+            centered(g, (game.initials + "___").substring(0, 3), BIG, Color.YELLOW, CY + 90);
+            centered(g, "ENTER to submit  ·  BACKSPACE to delete  ·  ESC to skip", SMALL, Color.LIGHT_GRAY, CY + 125);
             return;
         }
 
-        text(g, "Press 'R' to Restart", HUD, Color.YELLOW, 200, 320);
+        // Leaderboard on the left, result on the right so they never overlap
+        int rx = GamePanel.WIDTH * 2 / 3;
+        centeredAt(g, "Game Over", BIG, Color.RED, rx, CY - 50);
+        centeredAt(g, "Final score: " + game.score, HUD, Color.WHITE, rx, CY - 15);
+        centeredAt(g, "Press 'R' to Restart", HUD, Color.YELLOW, rx, CY + 20);
         drawLeaderboard(g);
     }
 
@@ -305,6 +308,22 @@ final class Renderer {
             text(g, line, LIST, isNew ? Color.YELLOW : Color.WHITE, 20, y);
             y += 25;
         }
+    }
+
+    private static final int CX = GamePanel.WIDTH / 2;
+    private static final int CY = GamePanel.HEIGHT / 2;
+
+    private static void centered(Graphics2D g, String s, Font font, Color color, int y) {
+        centeredAt(g, s, font, color, CX, y);
+    }
+
+    private static void centeredAt(Graphics2D g, String s, Font font, Color color, int cx, int y) {
+        text(g, s, font, color, cx - g.getFontMetrics(font).stringWidth(s) / 2, y);
+    }
+
+    private static void box(Graphics2D g, int w, int h, int top, Color color) {
+        g.setColor(color);
+        g.fillRoundRect(CX - w / 2, top, w, h, 22, 22);
     }
 
     private static void text(Graphics2D g, String s, Font font, Color color, int x, int y) {

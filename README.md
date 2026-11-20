@@ -30,9 +30,17 @@ Debug mode (999 lives; press `0` to clear a level):
 
 ## Levels
 
+- Four hand-designed mazes: **Classic, Courtyard, Labyrinth, Boss Arena**. They repeat after level 4.
 - Levels cycle through three themes: **Outdoor → Classroom → Planets**
 - Levels 1–3 have 1–3 cats; level 4 is the **boss** (fast and can't be eaten); then the cycle repeats
-- Mazes are randomly generated every level
+- Prefer chaos? **Settings → Mazes: Random** generates a new maze every level (Settings also has a sound toggle)
+
+### Making your own level
+
+Levels are plain text files in `src/main/resources/levels/` (`level1.txt` … `level4.txt`): 21 rows of
+21 characters. `#` wall, `.` dot, `o` big cheese, `P` player start, `C` the cat cage (keep it as the 3×3
+block in the exact centre), space = open floor with no dot. An open cell on the left/right edge is a
+wrap-around tunnel. Any dot the player can't reach is removed automatically when the level loads.
 - Skins: Rat, Squirrel, Joe Oakes
 
 ## Project layout
@@ -44,13 +52,14 @@ src/main/java/ratman/
   Renderer.java        all drawing
   CatAI.java           cat chase, eaten-cat "eyes" pathfinding, boss
   Cat.java             one cat's state
-  Maze.java            random maze generation
+  Maze.java            level loading + random maze generation
+  Settings.java, SettingsMenu.java   saved settings (maze style, sound)
   Theme.java, Skin.java
   Leaderboard.java     high scores in leaderboard.txt
   SoundPlayer.java, Assets.java, ControllerInput.java
   Menu.java, SkinsMenu.java
   tools/ControllerTester.java   prints raw gamepad events (for debugging controllers)
-src/main/resources/    images, sounds, fonts, maze themes
+src/main/resources/    images, sounds, fonts, maze themes, levels/
 ```
 
 High scores are saved to `~/.ratman/leaderboard.txt` (your home folder), so playing doesn't create Git changes.

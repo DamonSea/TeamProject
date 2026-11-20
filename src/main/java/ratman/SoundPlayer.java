@@ -36,7 +36,7 @@ public final class SoundPlayer {
     }
 
     public static void play(Sound sound) {
-        if (!enabled) return;
+        if (!enabled || !Settings.soundOn()) return;
         try {
             byte[] data = Assets.bytes(sound.path);
             AudioInputStream audio = AudioSystem.getAudioInputStream(

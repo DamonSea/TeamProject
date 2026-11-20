@@ -32,6 +32,10 @@ public final class RatMan {
         show(new SkinsMenu());
     }
 
+    static void showSettings() {
+        show(new SettingsMenu());
+    }
+
     static void startGame() {
         game = new GamePanel();
         show(game);
