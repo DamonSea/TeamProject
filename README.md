@@ -3,7 +3,25 @@
 A Pac-Man-style maze game in Java Swing. You're a rat collecting cheese while cats chase you.
 Grab the big cheese to power up and eat the cats. Every 4th level is a boss level.
 
-## Run it
+## Play it (no Java needed)
+
+Download the Mac or Windows app from the
+[**Releases page**](https://github.com/DamonSea/TeamProject/releases/latest). The first-launch
+steps for unsigned apps are listed there.
+
+## Publishing a new version
+
+Tag a commit and push the tag; GitHub Actions builds the apps and creates the release:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The workflow is `.github/workflows/release.yml`; the download page text is `packaging/RELEASE_NOTES.md`;
+the app icon comes from `packaging/make_icon.py`.
+
+## Run it from source
 
 Requires **Java 17+** and **Maven**.
 

@@ -28,6 +28,8 @@
     </dependencies>
 
     <build>
+        <!-- target/rat-man.jar (no version in the name, so the app packaging scripts can find it) -->
+        <finalName>rat-man</finalName>
         <plugins>
             <!-- Unpack JInput's native libraries (Windows/macOS/Linux) into target/natives
                  instead of committing .dll files to the repo. -->
@@ -56,6 +58,18 @@
                             </artifactItems>
                         </configuration>
                     </execution>
+                    <!-- Copy runtime libraries (JInput) to target/lib for building the desktop apps -->
+                    <execution>
+                        <id>copy-libs</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
@@ -74,7 +88,7 @@
                 </configuration>
             </plugin>
 
-            <!-- mvn package → target/rat-man-1.1.0.jar with Main-Class set -->
+            <!-- mvn package → target/rat-man.jar with Main-Class set -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>

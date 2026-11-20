@@ -17,6 +17,7 @@ public final class RatMan {
         useSameLookOnEveryOs();
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Rat-Man");
+            setAppIcon(frame);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setResizable(false);
             showMenu();
@@ -61,6 +62,20 @@ public final class RatMan {
         frame.setLocationRelativeTo(null); // re-centre, since the game screen is bigger than the menu
         frame.revalidate();
         frame.repaint();
+    }
+
+    /** Rat-on-cheese icon for the window and (on macOS) the Dock. */
+    private static void setAppIcon(JFrame f) {
+        java.awt.Image icon = Assets.image("/images/app_icon.png");
+        f.setIconImage(icon);
+        try {
+            if (java.awt.Taskbar.isTaskbarSupported()
+                    && java.awt.Taskbar.getTaskbar().isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                java.awt.Taskbar.getTaskbar().setIconImage(icon);
+            }
+        } catch (UnsupportedOperationException | SecurityException ignored) {
+            // not every OS lets apps change the taskbar icon
+        }
     }
 
     /**
