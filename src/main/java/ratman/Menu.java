@@ -11,29 +11,34 @@ import java.awt.image.BufferedImage;
 /** Title screen with START and SKINS buttons. */
 final class Menu extends JPanel {
     private static final int W = 500, H = 470;
-    private static final int PATH_Y = 400; // little chase scene along the bottom
+    private static final int PATH_Y = 418; // little chase scene along the bottom
 
     Menu() {
         setPreferredSize(new Dimension(W, H));
         setLayout(null);
 
         UiStyle.Title title = new UiStyle.Title("Rat-Man", Assets.font("/fonts/GinkobRetroFont.ttf", 100f));
-        title.setBounds(0, 25, W, 140);
+        title.setBounds(0, 15, W, 140);
         add(title);
 
         Font buttonFont = Assets.font("/fonts/RetroNakjoy-Regular.otf", 30f);
         UiStyle.RetroButton start = UiStyle.RetroButton.cheese("START", buttonFont);
-        start.setBounds(125, 180, 250, 60);
+        start.setBounds(95, 162, 310, 54);
         start.addActionListener(e -> RatMan.startGame());
         add(start);
 
+        UiStyle.RetroButton howTo = UiStyle.RetroButton.cheese("HOW TO PLAY", buttonFont);
+        howTo.setBounds(95, 224, 310, 54);
+        howTo.addActionListener(e -> RatMan.showHowToPlay());
+        add(howTo);
+
         UiStyle.RetroButton skins = UiStyle.RetroButton.cheese("SKINS", buttonFont);
-        skins.setBounds(125, 250, 250, 60);
+        skins.setBounds(95, 286, 310, 54);
         skins.addActionListener(e -> RatMan.showSkins());
         add(skins);
 
         UiStyle.RetroButton settings = UiStyle.RetroButton.cheese("SETTINGS", buttonFont);
-        settings.setBounds(125, 320, 250, 60);
+        settings.setBounds(95, 348, 310, 54);
         settings.addActionListener(e -> RatMan.showSettings());
         add(settings);
     }

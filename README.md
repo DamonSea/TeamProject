@@ -28,6 +28,8 @@ To build a jar: `mvn package` → `target/rat-man-1.1.0.jar`.
 Debug mode (999 lives; press `0` to clear a level):
 `mvn compile exec:java -Dratman.debug=true`
 
+New to the game? **HOW TO PLAY** on the main menu explains the basics and introduces each cat.
+
 ## Levels
 
 - Four hand-designed mazes: **Classic, Courtyard, Labyrinth, Boss Arena**. They repeat after level 4.
