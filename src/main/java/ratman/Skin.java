@@ -31,6 +31,25 @@ public enum Skin {
         return sheet.getSubimage(0, 0, size, sheet.getHeight());
     }
 
+    /** First frame cropped to a square around the actual drawing (no empty margins). */
+    public BufferedImage icon() {
+        BufferedImage f = firstFrame();
+        int minX = f.getWidth(), minY = f.getHeight(), maxX = -1, maxY = -1;
+        for (int y = 0; y < f.getHeight(); y++) {
+            for (int x = 0; x < f.getWidth(); x++) {
+                if ((f.getRGB(x, y) >>> 24) == 0) continue;
+                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+            }
+        }
+        if (maxX < 0) return f;
+        int size = Math.max(maxX - minX + 1, maxY - minY + 1) + 2;
+        BufferedImage out = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        int ox = (size - (maxX - minX + 1)) / 2, oy = (size - (maxY - minY + 1)) / 2;
+        out.createGraphics().drawImage(f.getSubimage(minX, minY, maxX - minX + 1, maxY - minY + 1), ox, oy, null);
+        return out;
+    }
+
     public static Skin selected() {
         return selected;
     }

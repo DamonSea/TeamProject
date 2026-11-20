@@ -33,6 +33,7 @@ final class Renderer {
      * to the drawing first). Bigger than the 30px tile, centred on it; collisions still use tiles.
      */
     private static final int PLAYER_SIZE = 42;
+    private static final int CAT_SIZE = 42;
     private static final int BOSS_WIDTH = 84;
 
     /** Square area (relative to each frame) that contains a sheet's actual drawing. */
@@ -83,7 +84,7 @@ final class Renderer {
         for (int y = 0; y < Maze.ROWS; y++) {
             for (int x = 0; x < Maze.COLS; x++) {
                 int px = x * T, py = y * T;
-                if (maze.isWall(x, y)) {
+                if (maze.isWall(x, y) && !Maze.inCage(x, y)) { // the cage draws its own floor
                     int sx = maze.tileVariant(x, y) * T;
                     g.drawImage(tiles, px, py, px + T, py + T, sx, 0, sx + T, T, null);
                 } else if (maze.hasDot(x, y)) {
@@ -98,16 +99,26 @@ final class Renderer {
     }
 
     private static final Color CAGE_FLOOR = new Color(125, 105, 80);
+    private static final Color CAGE_FRAME = new Color(40, 30, 20);
 
     private void drawCage(Graphics2D g) {
         int fw = cage.getWidth() / 2;
         int sx = game.cageDoorTimer > 0 ? fw : 0;
         int cx = (Maze.CAGE_X - 1) * T, cy = (Maze.CAGE_Y - 1) * T;
-        // Solid floor behind the bars so the level's wall tiles don't show through them.
-        // In Cage.png the bars cover x 1-28, y 10-25 of each 30x30 frame (scaled x3 here).
+        int size = 3 * T;
+        // The whole 3x3 cage is a solid room (no maze tiles inside) with a dark frame
         g.setColor(CAGE_FLOOR);
-        g.fillRect(cx + 3, cy + 30, 84, 48);
-        g.drawImage(cage, cx, cy, cx + 3 * T, cy + 3 * T, sx, 0, sx + fw, cage.getHeight(), null);
+        g.fillRect(cx, cy, size, size);
+        g.setColor(CAGE_FRAME);
+        g.setStroke(new java.awt.BasicStroke(3));
+        g.drawRect(cx + 1, cy + 1, size - 3, size - 3);
+        g.setStroke(new java.awt.BasicStroke(1));
+        // Cage.png: bars at x 1-28, y 10-25; the open frame's door swings up into y 2-9.
+        // Crop x 1-29, y 2-26 and fit it to the room, bottom-aligned.
+        int srcX = sx + 1, srcY = 2, srcW = 28, srcH = 24;
+        int dw = size - 8, dh = dw * srcH / srcW;
+        int dx = cx + 4, dy = cy + size - 4 - dh;
+        g.drawImage(cage, dx, dy, dx + dw, dy + dh, srcX, srcY, srcX + srcW, srcY + srcH, null);
     }
 
     private void drawEnemies(Graphics2D g) {
@@ -123,11 +134,16 @@ final class Renderer {
         }
         for (Cat cat : game.activeCats()) {
             if (cat.eyes) {
-                drawFrame(g, catEyes, frame, catEyes.getHeight(), cat.x, cat.y);
+                // The eyes sheet is just eyes, so cropping it would blow them up. Draw the whole frame
+                // at the same pixel scale as the scared-cat sheet (same 64px frames) so they line up.
+                int fullFrame = CAT_SIZE * catsScared.getHeight() / artBox(catsScared, catsScared.getHeight()).size();
+                int px = cat.x * T + T / 2 - fullFrame / 2, py = cat.y * T + T / 2 - fullFrame / 2;
+                int fw = catEyes.getHeight(), sx = frame * fw;
+                g.drawImage(catEyes, px, py, px + fullFrame, py + fullFrame, sx, 0, sx + fw, fw, null);
             } else if (cat.frightened && !flashWarning()) {
-                drawFrame(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cat.x, cat.y);
+                drawSprite(g, catsScared, cat.index * 2 + frame, catsScared.getHeight(), cat.x, cat.y, CAT_SIZE);
             } else {
-                drawFrame(g, cats, cat.index * 2 + frame, cats.getHeight(), cat.x, cat.y);
+                drawSprite(g, cats, cat.index * 2 + frame, cats.getHeight(), cat.x, cat.y, CAT_SIZE);
             }
         }
     }
@@ -151,11 +167,12 @@ final class Renderer {
         drawFacing(g, death, phase, fw);
     }
 
-    /** Draws frame {@code index} (each {@code frameWidth} px wide) of a sheet, scaled into tile (x, y). */
-    private static void drawFrame(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int x, int y) {
-        int sx = index * frameWidth;
-        int px = x * T, py = y * T;
-        g.drawImage(sheet, px, py, px + T, py + T, sx, 0, sx + frameWidth, sheet.getHeight(), null);
+    /** Draws frame {@code index} of a sheet, cropped to its artwork, {@code size} px square, centred on tile (x, y). */
+    private void drawSprite(Graphics2D g, BufferedImage sheet, int index, int frameWidth, int x, int y, int size) {
+        ArtBox box = artBox(sheet, frameWidth);
+        int sx = index * frameWidth + box.x();
+        int px = x * T + T / 2 - size / 2, py = y * T + T / 2 - size / 2;
+        g.drawImage(sheet, px, py, px + size, py + size, sx, box.y(), sx + box.size(), box.y() + box.size(), null);
     }
 
     /**
